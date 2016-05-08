@@ -56,6 +56,7 @@ setup(
     author=author,
     author_email=author_email,
     packages=get_packages(package),
+    install_requires=install_requires,
     extras_require={
         'dev': dev_requires,
         'arrow': arrow_requires,
