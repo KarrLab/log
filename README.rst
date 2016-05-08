@@ -1,10 +1,11 @@
 =====
- LOG
+ log
 =====
 
 because you deserve better than log4j
 
 .. image:: https://travis-ci.org/vforgione/log.svg?branch=master
+.. image:: https://pypip.in/version/log.svg
 
 
 --------------

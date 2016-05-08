@@ -3,7 +3,6 @@
 
 import os
 import re
-import sys
 from setuptools import setup
 
 
@@ -14,11 +13,6 @@ url = 'https://github.com/vforgione/log'
 author = 'Vince Forgione'
 author_email = 'vince.4gione@icloud.com'
 license = 'MIT'
-
-install_requires = []
-version = sys.version_info
-if version.major == 3 and version.minor < 4:
-    install_requires.append('enum')
 
 dev_requires = [
     'pytest',
@@ -56,7 +50,6 @@ setup(
     author=author,
     author_email=author_email,
     packages=get_packages(package),
-    install_requires=install_requires,
     extras_require={
         'dev': dev_requires,
         'arrow': arrow_requires,
