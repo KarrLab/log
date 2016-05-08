@@ -15,10 +15,7 @@ author_email = 'vince.4gione@icloud.com'
 license = 'MIT'
 
 dev_requires = [
-    'flake8',
     'pytest',
-    'pytest-cov',
-    'mkdocs',
 ]
 
 arrow_requires = [
