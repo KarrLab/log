@@ -9,6 +9,24 @@ because you deserve better than log4j
  installation
 --------------
 
+pip
+---
+
+you can install via pip::
+
+    $ pip install log
+
+if you want timezone support in the log entries, install the arrow extras::
+
+    $ pip install log[arrow]
+
+if you want to contribute, install the dev extras::
+
+    $ pip install log[dev]
+
+git
+---
+
 clone and run setup.py::
 
     $ git clone https://github.com/vforgione/log.git
