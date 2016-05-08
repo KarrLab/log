@@ -2,6 +2,9 @@
  LOG
 =====
 
+.. image:: https://travis-ci.org/vforgione/log.svg?branch=master
+:target: https://travis-ci.org/vforgione/log
+
 because you deserve better than log4j
 
 
