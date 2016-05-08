@@ -1,0 +1,11 @@
+language: python
+sudo: false
+python:
+  - '3.2'
+  - '3.4'
+  - '3.5'
+install:
+  - travis_retry pip install -e .
+  - travis_retry pip install file://$(pwd)#egg=log[dev]
+script:
+  - 'py.test tests -s'
