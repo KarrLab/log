@@ -1,4 +1,5 @@
 import codecs
+import os
 import syslog
 
 
@@ -60,6 +61,7 @@ class StreamHandler(_HandlerInterface):
         """
         message = self._append_new_line(message)
         self.stream.write(message)
+        self.stream.flush()
 
 
 class FileHandler(_HandlerInterface):
@@ -101,6 +103,7 @@ class FileHandler(_HandlerInterface):
         """
         message = self._append_new_line(message)
         self.fh.write(message)
+        self.fh.flush()
 
 
 class SocketHandler(_HandlerInterface):
@@ -132,15 +135,7 @@ class SocketHandler(_HandlerInterface):
         super(SocketHandler, self).__init__(*args, **kwargs)
         self.socket = socket
         self._address = address
-        self.socket.bind(address)
-
-    def __del__(self):
-        """ closes the socket connection """
-        try:
-            self.socket.shutdown()
-            self.socket.close()
-        except OSError:
-            pass
+        self.socket.connect(address)
 
     def write(self, message):
         """writes the message to the configured socket
