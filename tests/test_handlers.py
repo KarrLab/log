@@ -23,14 +23,11 @@ class StreamSysOutHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def test_write(self):
         output = 'ohaiii'
-        test_dir = os.path.dirname(__file__)
-        proj_dir = os.path.dirname(test_dir)
-        executable = os.path.join(proj_dir, '.env', 'bin', 'python')
         cmd = 'from log import handlers; ' \
               'import sys; ' \
               'handler = handlers.StreamHandler(sys.stdout); ' \
               'handler.write("{output}")'.format(output=output)
-        proc = subprocess.Popen([executable, '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(['python', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, _ = proc.communicate()
         expected = bytes('{output}\n'.format(output=output), 'utf8')
         self.assertEqual(stdout, expected)
@@ -43,14 +40,11 @@ class StreamSysErrHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def test_write(self):
         output = 'ohaiii'
-        test_dir = os.path.dirname(__file__)
-        proj_dir = os.path.dirname(test_dir)
-        executable = os.path.join(proj_dir, '.env', 'bin', 'python')
         cmd = 'from log import handlers; ' \
               'import sys; ' \
               'handler = handlers.StreamHandler(sys.stderr); ' \
               'handler.write("{output}")'.format(output=output)
-        proc = subprocess.Popen([executable, '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(['python', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _, stderr = proc.communicate()
         expected = bytes('{output}\n'.format(output=output), 'utf8')
         self.assertEqual(stderr, expected)

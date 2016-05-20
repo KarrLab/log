@@ -158,7 +158,7 @@ class MultiHandlerLoggerTests(unittest.TestCase):
         capd = captured.get_text()
         self.assertEqual(capd, message)
         logger.add_handler(self.stderr_handler)
-        self.assertEqual(logger.handlers, [self.stdout_handler, self.stderr_handler])
+        self.assertEqual(set(logger.handlers), {self.stdout_handler, self.stderr_handler})
         with CaptureOutput() as captured:
             logger.info(message)
         capd = captured.get_lines()
@@ -173,7 +173,7 @@ class MultiHandlerLoggerTests(unittest.TestCase):
         capd = captured.get_text()
         self.assertEqual(capd, message)
         logger.add_handler(self.stderr_handler)
-        self.assertEqual(logger.handlers, [self.stdout_handler, self.stderr_handler])
+        self.assertEqual(set(logger.handlers), {self.stdout_handler, self.stderr_handler})
         with CaptureOutput() as captured:
             logger.info(message)
         capd = captured.get_lines()
