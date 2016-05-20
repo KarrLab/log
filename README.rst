@@ -8,7 +8,8 @@ because you deserve better than log4j
    :target: https://travis-ci.org/vforgione/log
 .. image:: https://img.shields.io/pypi/v/log.svg?style=flat
    :target: https://pypi.python.org/pypi/log
-
+.. image:: https://coveralls.io/repos/github/vforgione/log/badge.svg?branch=master
+   :target: https://coveralls.io/github/vforgione/log?branch=master
 
 --------------
  installation
