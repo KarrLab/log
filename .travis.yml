@@ -8,4 +8,4 @@ install:
   - travis_retry pip install file://$(pwd)#egg=log[dev]
   - travis_retry pip install file://$(pwd)#egg=log[arrow]
 script:
-  - 'py.test tests -s'
+  - 'py.test --cov log --cov-report term-missing tests'
