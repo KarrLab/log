@@ -18,6 +18,7 @@ dev_requires = [
     'pytest',
     'pytest-cov',
     'capturer',
+    'coveralls',
 ]
 
 arrow_requires = [

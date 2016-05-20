@@ -9,3 +9,5 @@ install:
   - travis_retry pip install file://$(pwd)#egg=log[arrow]
 script:
   - 'py.test --cov log --cov-report term-missing tests'
+after_success:
+  - coveralls
