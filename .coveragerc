@@ -1,0 +1,5 @@
+[report]
+ignore_errors = True
+exclude_lines =
+    NotImplementedError
+    pragma: no cover

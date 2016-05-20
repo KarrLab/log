@@ -3,7 +3,7 @@ import unittest
 from log.formatters import TemplateStyle, Formatter
 
 
-class TestFormatter(unittest.TestCase):
+class FormatterTests(unittest.TestCase):
 
     def setUp(self):
         self.template = '[{timestamp}] [{level}] {message}'

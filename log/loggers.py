@@ -4,6 +4,7 @@ import sys
 import traceback
 from datetime import datetime
 
+from .errors import ConfigurationError
 from .formatters import Formatter, TemplateStyle
 from .handlers import _HandlerInterface, StreamHandler
 from .levels import LogLevel
@@ -11,8 +12,8 @@ from .levels import LogLevel
 try:
     import arrow
     _arrow_available = True
-except ImportError:
-    _arrow_available = False
+except ImportError:  # pragma: no cover
+    _arrow_available = False  # pragma: no cover
 
 
 BRACES_REGEX = re.compile('\{(?P<key>\w+)\}')
@@ -69,7 +70,7 @@ class Logger(object):
         :param additional_context: additional key/values to inject into the template that aren't included in RESERVED_LOG_PARAMS
         :type additional_context: dict
         """
-        self.name = name or __name__
+        self.name = name
         self._level = level
         self.additional_context = additional_context
 
@@ -77,7 +78,6 @@ class Logger(object):
         assert isinstance(style, TemplateStyle)
         self._style = style
         assert issubclass(formatter_class, Formatter)
-        self._formatter_class = formatter_class
         self._formatter = formatter_class(template, style)
 
         for handler in handlers:
@@ -85,7 +85,7 @@ class Logger(object):
         self._handlers = set(handlers)
 
         if timezone_aware and not all([timezone, _arrow_available]):
-            raise Exception(
+            raise ConfigurationError(
                 'You must specify a timezone string and have arrow installed to use timezone aware timestamps')
         self._timezone_aware = timezone_aware
         self.timezone = timezone
@@ -97,48 +97,40 @@ class Logger(object):
         return self._level
 
     @level.setter
-    def level(self, value):
-        assert isinstance(value, LogLevel)
-        self._level = value
-
-    @property
-    def style(self):
-        return self._style
-
-    @style.setter
-    def style(self, value):
-        assert isinstance(value, TemplateStyle)
-        self._style = value
-        self._formatter = self.formatter_class(self.template, self._style)
+    def level(self, level):
+        assert isinstance(level, LogLevel)
+        self._level = level
 
     @property
     def formatter_class(self):
-        return self._formatter_class
-
-    @formatter_class.setter
-    def formatter_class(self, value):
-        assert issubclass(value, Formatter)
-        self._formatter_class = value
-        self._formatter = self.formatter_class(self.template, self._style)
-
-    @property
-    def timezone_aware(self):
-        return self._timezone_aware
-
-    @timezone_aware.setter
-    def timezone_aware(self, value):
-        if value and not all([self.timezone, _arrow_available]):
-            raise Exception(
-                'You must specify a timezone string and have arrow installed to use timezone aware timestamps')
-        self._timezone_aware = value
+        return self._formatter.__class__
 
     @property
     def formatter(self):
         return self._formatter
 
+    @formatter.setter
+    def formatter(self, formatter):
+        assert isinstance(formatter, Formatter)
+        self._formatter = formatter
+
     @property
     def handlers(self):
         return list(self._handlers)
+
+    @property
+    def is_timezone_aware(self):
+        return self._timezone_aware
+
+    def make_timezone_aware(self, timezone):
+        if not _arrow_available:
+            raise Exception('You must have arrow installed to use timezone aware timestamps')  # pragma: no cover
+        self._timezone_aware = True
+        self.timezone = timezone
+
+    def remove_timezone(self):
+        self._timezone_aware = False
+        self.timezone = None
 
     def add_handler(self, handler):
         """adds a new handler to the list of handlers
@@ -163,7 +155,7 @@ class Logger(object):
             return BRACES_REGEX.findall(self.template)
         return PERCENT_REGEX.findall(self.template)
 
-    def _log(self, message, level, exception=None, **kwargs):
+    def _log(self, message, level, exception=None, **kwargs):  # pragma: no cover
         """formats the message and writes it out via the handlers
 
         :param message: the information to be logged
@@ -259,4 +251,4 @@ class Logger(object):
         :param exception: a raised exception
         :type exception: Exception
         """
-        self._log(message='', level=LogLevel.EXCEPTION, exception=exception)
+        self._log(message=str(exception), level=LogLevel.EXCEPTION, exception=exception)

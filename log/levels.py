@@ -11,7 +11,7 @@ class LogLevel(Enum):
     INFO = 1        # logs general information
     WARNING = 2     # logs warning information
     ERROR = 3       # logs error information
-    EXCEPTION = 4   # logs exception traces
+    EXCEPTION = 4   # logs exception stack traces
 
     def __str__(self):
         return self.name.upper()

@@ -16,6 +16,7 @@ license = 'MIT'
 
 dev_requires = [
     'pytest',
+    'pytest-cov',
 ]
 
 arrow_requires = [

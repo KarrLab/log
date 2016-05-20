@@ -1,5 +1,4 @@
 import codecs
-import os
 import syslog
 
 
@@ -89,11 +88,6 @@ class FileHandler(_HandlerInterface):
         self._mode = mode
         self._encoding = encoding
         self.fh = codecs.open(filename, mode=mode, encoding=encoding)
-
-    def __del__(self):
-        """ closes the file """
-        if not self.fh.closed:
-            self.fh.close()
 
     def write(self, message):
         """appends the message to the configured file

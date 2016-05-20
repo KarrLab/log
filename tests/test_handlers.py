@@ -13,7 +13,10 @@ class BaseHandlerTest(object):
         raise NotImplementedError
 
 
-class TestStreamSysOutHandler(BaseHandlerTest, unittest.TestCase):
+# use popen to test stdout/err tests because we want to enure it's sent to the right system io
+# using capturer (like in logger tests) combines out and err
+
+class StreamSysOutHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.handler = handlers.StreamHandler(sys.stdout)
@@ -33,7 +36,7 @@ class TestStreamSysOutHandler(BaseHandlerTest, unittest.TestCase):
         self.assertEqual(stdout, expected)
 
 
-class TestStreamSysErrHandler(BaseHandlerTest, unittest.TestCase):
+class StreamSysErrHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.handler = handlers.StreamHandler(sys.stderr)
@@ -53,7 +56,7 @@ class TestStreamSysErrHandler(BaseHandlerTest, unittest.TestCase):
         self.assertEqual(stderr, expected)
 
 
-class TestFileHandler(BaseHandlerTest, unittest.TestCase):
+class FileHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.filename = '/tmp/test_handlers.log'
@@ -73,7 +76,7 @@ class TestFileHandler(BaseHandlerTest, unittest.TestCase):
         self.assertEqual(contents, expected)
 
 
-class TestSocketHandler(BaseHandlerTest, unittest.TestCase):
+class SocketHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -83,7 +86,7 @@ class TestSocketHandler(BaseHandlerTest, unittest.TestCase):
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind(self.address)
         self.server.listen(5)
-        # handler is client
+        # handler is a client
         self.handler = handlers.SocketHandler(self.socket, self.address)
 
     def tearDown(self):
@@ -103,7 +106,7 @@ class TestSocketHandler(BaseHandlerTest, unittest.TestCase):
         self.assertEqual(messages, expected)
 
 
-class TestSyslogHandler(BaseHandlerTest, unittest.TestCase):
+class SyslogHandlerTest(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.handler = handlers.SysLogHandler()
