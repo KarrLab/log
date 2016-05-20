@@ -49,7 +49,8 @@ class Logger(object):
         :param level: the minimum log level to write - defaults to `log.levels.LogLevel.INFO`
         :type level: log.levels.LogLevel
 
-        :param template: the template used to format the log entries - defaults to `'[{timestamp}] [{level}] : {message}'`
+        :param template: the template used to format the log entries -
+            defaults to `'[{timestamp}] [{level}] : {message}'`
         :type template: str
 
         :param style: the formatter style to use for the template - defaults to `log.formatters.TemplateStyle.BRACES`
@@ -67,7 +68,8 @@ class Logger(object):
         :param timezone: a timezone string parseable by arrow - defaults to `None`
         :type timezone: str
 
-        :param additional_context: additional key/values to inject into the template that aren't included in RESERVED_LOG_PARAMS
+        :param additional_context: additional key/values to inject into the template that aren't
+            included in RESERVED_LOG_PARAMS
         :type additional_context: dict
         """
         self.name = name
@@ -186,7 +188,7 @@ class Logger(object):
             params['message'] = '{}\n'.format(message) + '\n'.join(traceback.format_exc().splitlines())
         # inject configured additional context info
         for key, value in self.additional_context.items():
-            if type(value) == type(lambda x: ()):  # check if it's callable
+            if hasattr(value, '__call__'):
                 params[key] = value()
             else:
                 params[key] = value

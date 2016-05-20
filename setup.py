@@ -19,6 +19,7 @@ dev_requires = [
     'pytest-cov',
     'capturer',
     'coveralls',
+    'flake8',
 ]
 
 arrow_requires = [
@@ -32,11 +33,17 @@ def get_version(pkg):
 
 
 def get_packages(pkg):
-    return [dirpath for dirpath, dirnames, filenames in os.walk(pkg) if os.path.exists(os.path.join(dirpath, '__init__.py'))]
+    return [
+        dirpath for dirpath, dirnames, filenames in os.walk(pkg)
+        if os.path.exists(os.path.join(dirpath, '__init__.py'))
+    ]
 
 
 def get_package_data(pkg):
-    walk = [(dirpath.replace(pkg + os.sep, '', 1), filenames) for dirpath, dirnames, filenames in os.walk(pkg) if not os.path.exists(os.path.join(dirpath, '__init__.py'))]
+    walk = [
+        (dirpath.replace(pkg + os.sep, '', 1), filenames) for dirpath, dirnames, filenames in os.walk(pkg)
+        if not os.path.exists(os.path.join(dirpath, '__init__.py'))
+    ]
 
     filepaths = []
     for base, filenames in walk:

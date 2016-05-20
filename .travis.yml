@@ -8,6 +8,7 @@ install:
   - travis_retry pip install file://$(pwd)#egg=log[dev]
   - travis_retry pip install file://$(pwd)#egg=log[arrow]
 script:
+  - flake8
   - 'py.test --cov log --cov-report term-missing tests'
 after_success:
   - coveralls
