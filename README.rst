@@ -55,8 +55,4 @@ if you want to contribute, install the dev extras::
 
 to run the tests you must either install the dev extras (see above). then, simply run pytest::
 
-    $ py.test tests
-
-to see the logs as the tests run::
-
-    $ py.test tests -s
+    $ py.test --cov log --cov-report term-missing tests
