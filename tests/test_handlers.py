@@ -5,7 +5,7 @@ import subprocess
 import sys
 import unittest
 
-from log import handlers, levels
+from log import handlers
 
 
 class BaseHandlerTest(object):
@@ -13,40 +13,40 @@ class BaseHandlerTest(object):
         raise NotImplementedError
 
 
-# use popen to test stdout/err tests because we want to enure it's sent to the right system io
-# using capturer (like in logger tests) combines out and err
+# using popen to test stdout/err tests because we want to ensure messages are being sent to the right system io
+# using capturer (like in logger tests) combines out and err and is pretty unhelpful here
 
 class StreamSysOutHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
-        self.handler = handlers.StreamHandler(sys.stdout)
+        self.handler = handlers.StreamHandler('test:sys.stdout', sys.stdout)
 
     def test_write(self):
         output = 'ohaiii'
         cmd = 'from log import handlers; ' \
               'import sys; ' \
-              'handler = handlers.StreamHandler(sys.stdout); ' \
+              'handler = handlers.StreamHandler("test:sys.stdout", sys.stdout); ' \
               'handler.write("{output}")'.format(output=output)
         proc = subprocess.Popen(['python', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, _ = proc.communicate()
-        expected = bytes('{output}\n'.format(output=output), 'utf8')
+        expected = bytes('{output}'.format(output=output), 'utf8')
         self.assertEqual(stdout, expected)
 
 
 class StreamSysErrHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
-        self.handler = handlers.StreamHandler(sys.stderr)
+        self.handler = handlers.StreamHandler('test:sys.stderr', sys.stderr)
 
     def test_write(self):
         output = 'ohaiii'
         cmd = 'from log import handlers; ' \
               'import sys; ' \
-              'handler = handlers.StreamHandler(sys.stderr); ' \
+              'handler = handlers.StreamHandler("test:sys.stderr", sys.stderr); ' \
               'handler.write("{output}")'.format(output=output)
         proc = subprocess.Popen(['python', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         _, stderr = proc.communicate()
-        expected = bytes('{output}\n'.format(output=output), 'utf8')
+        expected = bytes('{output}'.format(output=output), 'utf8')
         self.assertEqual(stderr, expected)
 
 
@@ -54,7 +54,7 @@ class FileHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.filename = '/tmp/test_handlers.log'
-        self.handler = handlers.FileHandler(self.filename)
+        self.handler = handlers.FileHandler('test:fh', self.filename)
 
     def tearDown(self):
         os.remove(self.filename)
@@ -64,7 +64,8 @@ class FileHandlerTests(BaseHandlerTest, unittest.TestCase):
         expected = []
         for _ in range(5):
             self.handler.write(output)
-            expected.append('{output}\n'.format(output=output))
+            expected.append('{output}'.format(output=output))
+        expected = [''.join(expected)]
         with codecs.open(self.filename, 'r', encoding='utf8') as fh:
             contents = [line for line in fh]
         self.assertEqual(contents, expected)
@@ -81,7 +82,7 @@ class SocketHandlerTests(BaseHandlerTest, unittest.TestCase):
         self.server.bind(self.address)
         self.server.listen(5)
         # handler is a client
-        self.handler = handlers.SocketHandler(self.socket, self.address)
+        self.handler = handlers.SocketHandler('test:localhost@8089', self.socket, self.address)
 
     def tearDown(self):
         del self.server
@@ -96,14 +97,5 @@ class SocketHandlerTests(BaseHandlerTest, unittest.TestCase):
             if len(buffer) > 0:
                 messages.append(buffer)
                 break
-        expected = [bytes('{output}\n'.format(output=output), 'utf8')]
+        expected = [bytes('{output}'.format(output=output), 'utf8')]
         self.assertEqual(messages, expected)
-
-
-class SyslogHandlerTest(BaseHandlerTest, unittest.TestCase):
-
-    def setUp(self):
-        self.handler = handlers.SysLogHandler()
-
-    def test_write(self):
-        self.handler.write('ohaiii', levels.LogLevel.INFO)

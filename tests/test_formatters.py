@@ -18,13 +18,13 @@ class FormatterTests(unittest.TestCase):
         self.assertEqual(self.formatter.style, TemplateStyle.PERCENT)
 
     def test_style_setter_fail(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             self.formatter.style = 'something else entirely'
 
     def test_format_entry_success(self):
         params = {'timestamp': 'right_now', 'level': 'boss', 'message': 'hooray!'}
         entry = self.formatter.format_entry(params)
-        expected = '[right_now] [boss] hooray!'
+        expected = '[right_now] [boss] hooray!\n'
         self.assertEqual(entry, expected)
 
     def test_format_mismatched_formatter(self):
@@ -32,4 +32,15 @@ class FormatterTests(unittest.TestCase):
         params = {'timestamp': 'right_now', 'level': 'boss', 'message': 'hooray!'}
         entry = self.formatter.format_entry(params)
         expected = self.formatter.template
+        self.assertEqual(entry, expected)
+
+    def test_init_with_bad_style(self):
+        with self.assertRaises(ValueError):
+            Formatter('{message}', 'braces')
+
+    def test_init_no_append_new_line(self):
+        formatter = Formatter(self.template, self.style, append_new_line=False)
+        params = {'timestamp': 'right_now', 'level': 'boss', 'message': 'hooray!'}
+        entry = formatter.format_entry(params)
+        expected = '[right_now] [boss] hooray!'
         self.assertEqual(entry, expected)

@@ -96,6 +96,21 @@ class TimezoneAwareLoggerTests(unittest.TestCase):
         self.logger.remove_timezone()
         self.assertFalse(self.logger.is_timezone_aware)
 
+    def test_get_timestamp(self):
+        ts = self.logger._get_timestamp()
+        self.assertRegex(ts, '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}-05:00')
+
+    def test_get_exec_info(self):
+        # need to flub this a little
+        def get_info():
+            exec_info = self.logger._get_exec_info()
+            return exec_info
+        exec_info = get_info()
+        self.assertTrue(exec_info['exec_src'].endswith('test_loggers.py'))  # this file name
+        self.assertEqual(exec_info['exec_line'], 108)  # 2 lines up where exec_info is created
+        self.assertEqual(exec_info['exec_func'], 'test_get_exec_info')  # this function's name
+        self.assertTrue(exec_info['exec_proc'])  # just assert it's a positive integer
+
 
 class GetterSetterLoggerTests(unittest.TestCase):
 
@@ -147,8 +162,8 @@ class MultiHandlerLoggerTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.stdout_handler = StreamHandler(sys.stdout)
-        cls.stderr_handler = StreamHandler(sys.stderr)
+        cls.stdout_handler = StreamHandler('test:sys.stdout', sys.stdout)
+        cls.stderr_handler = StreamHandler('test:sys.stderr', sys.stderr)
 
     def test_add_handler(self):
         logger = Logger(handlers=[self.stdout_handler], template='{message}')

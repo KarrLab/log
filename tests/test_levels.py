@@ -55,3 +55,12 @@ class LogLevelTests(unittest.TestCase):
         self.assertLess(LogLevel.INFO, LogLevel.WARNING)
         self.assertLess(LogLevel.WARNING, LogLevel.ERROR)
         self.assertLess(LogLevel.ERROR, LogLevel.EXCEPTION)
+
+    def test_get_level_for_log_method(self):
+        self.assertEqual(LogLevel.DEBUG, LogLevel.get_level_for_log_method('debug'))
+        self.assertEqual(LogLevel.INFO, LogLevel.get_level_for_log_method('info'))
+        self.assertEqual(LogLevel.WARNING, LogLevel.get_level_for_log_method('warning'))
+        self.assertEqual(LogLevel.ERROR, LogLevel.get_level_for_log_method('error'))
+        self.assertEqual(LogLevel.EXCEPTION, LogLevel.get_level_for_log_method('exception'))
+        with self.assertRaises(ValueError):
+            LogLevel.get_level_for_log_method('informacion')

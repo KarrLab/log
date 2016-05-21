@@ -1,3 +1,4 @@
+import inspect
 import os
 import re
 import sys
@@ -31,7 +32,7 @@ class Logger(object):
     DEFAULT_LOG_TEMPLATE = '[{timestamp}] [{level}] : {message}'
     DEFAULT_LOG_STYLE = TemplateStyle.BRACES
     DEFAULT_FORMATTER_CLASS = Formatter
-    DEFAULT_HANDLERS = [StreamHandler(sys.stdout)]
+    DEFAULT_HANDLERS = [StreamHandler(name='default:sys.stdout', stream=sys.stdout)]
     DEFAULT_TIMEZONE_AWARE = False
     DEFAULT_TIMEZONE = None
     DEFAULT_ADDITIONAL_CONTEXT = {}
@@ -73,18 +74,27 @@ class Logger(object):
         :type additional_context: dict
         """
         self.name = name
-        self._level = level
         self.additional_context = additional_context
 
+        if not isinstance(level, LogLevel):
+            raise ValueError('`level` must be an instance of LogLevel')
+        self._level = level
+
         self.template = template
-        assert isinstance(style, TemplateStyle)
+        if not isinstance(style, TemplateStyle):
+            raise ValueError('`style` must be an instance of TemplateStyle')
+
         self._style = style
-        assert issubclass(formatter_class, Formatter)
+        if not issubclass(formatter_class, Formatter):
+            raise TypeError('`formatter_class` must be one or subclass of Formatter')
         self._formatter = formatter_class(template, style)
 
-        for handler in handlers:
-            assert isinstance(handler, _HandlerInterface)
-        self._handlers = set(handlers)
+        self._handlers = []
+        for i, handler in enumerate(handlers):
+            if not isinstance(handler, _HandlerInterface):
+                raise ValueError('`handlers[{i}]` does not implement _HandlerInterface'.format(i=i))
+            if handler.name not in [h.name for h in self._handlers]:
+                self._handlers.append(handler)
 
         if timezone_aware and not all([timezone, _arrow_available]):
             raise ConfigurationError(
@@ -118,7 +128,7 @@ class Logger(object):
 
     @property
     def handlers(self):
-        return list(self._handlers)
+        return self._handlers
 
     @property
     def is_timezone_aware(self):
@@ -126,7 +136,8 @@ class Logger(object):
 
     def make_timezone_aware(self, timezone):
         if not _arrow_available:
-            raise Exception('You must have arrow installed to use timezone aware timestamps')  # pragma: no cover
+            raise ConfigurationError(
+                'You must have arrow installed to use timezone aware timestamps')
         self._timezone_aware = True
         self.timezone = timezone
 
@@ -140,8 +151,10 @@ class Logger(object):
         :param handler: a new handler to log out entries
         :type handler: log.handlers._HandlerInterface
         """
-        assert isinstance(handler, _HandlerInterface)
-        self._handlers.add(handler)
+        if not isinstance(handler, _HandlerInterface):
+            raise ValueError('`handler` does not implement _HandlerInterface')
+        if handler.name not in [h.name for h in self._handlers]:
+            self._handlers.append(handler)
 
     def remove_handler(self, handler):
         """removes a handler from the list of handlers
@@ -170,35 +183,57 @@ class Logger(object):
         :type kwargs: dict
         """
         params = {'message': message, 'level': level, 'name': self.name}
-        # set the timestamp if it is in the template
+
         if 'timestamp' in self._template_keys:
-            if self._timezone_aware:
-                params['timestamp'] = arrow.utcnow().to(self.timezone).isoformat()
-            else:
-                params['timestamp'] = datetime.now().isoformat()
-        # set the execution params if they are in the template
+            params['timestamp'] = self._get_timestamp()
+
         if {'exec_src', 'exec_line', 'exec_func', 'exec_proc'}.intersection(set(self._template_keys)):
-            frame = sys._getframe(2)
-            params['exec_src'] = frame.f_code.co_filename
-            params['exec_func'] = frame.f_code.co_name
-            params['exec_line'] = frame.f_lineno
-            params['exec_proc'] = os.getpid()
-        # set the message to the exception info if it's an exception
+            exec_info = self._get_exec_info()
+            params.update(exec_info)
+
         if exception:
             params['message'] = '{}\n'.format(message) + '\n'.join(traceback.format_exc().splitlines())
-        # inject configured additional context info
+
         for key, value in self.additional_context.items():
-            if hasattr(value, '__call__'):
+            if inspect.isfunction(value):
                 params[key] = value()
             else:
                 params[key] = value
-        # inject instance context info
+
         for key, value in kwargs.items():
             params[key] = value
-        # format and handle the line
+
         log_line = self._formatter.format_entry(params)
         for handler in self._handlers:
             handler.write(log_line)
+
+    def _get_timestamp(self):
+        """gets a formatted timestamp
+
+        :return: the current time in ISO 8601 string format
+        :rtype: str
+        """
+        if self._timezone_aware:
+            ts = arrow.utcnow().to(self.timezone)
+        else:
+            ts = datetime.now()
+        ts = ts.isoformat()
+        return ts
+
+    def _get_exec_info(self):
+        """gets execution information
+
+        :return: a dictionary of execution infomation
+        :rtype: dict
+        """
+        frame = sys._getframe(2)
+        fname, line, funcname, _, __ = inspect.getframeinfo(frame)
+        return {
+            'exec_src': fname,
+            'exec_func': funcname,
+            'exec_line': line,
+            'exec_proc': os.getpid(),
+        }
 
     def debug(self, message, **kwargs):
         """writes a debug line

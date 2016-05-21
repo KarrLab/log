@@ -1,2 +1,2 @@
-class ConfigurationError(Exception):
+class ConfigurationError(Exception):  # pragma: no cover
     pass

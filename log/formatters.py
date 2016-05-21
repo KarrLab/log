@@ -15,17 +15,23 @@ class Formatter(object):
     a simple wrapper for interpolating message strings
     """
 
-    def __init__(self, template, style):
+    def __init__(self, template, style, append_new_line=True):
         """
         :param template: the template string for the log message
         :type template: str
 
         :param style: control value for determining the interpolation method
         :type style: log.formatters.TemplateStyle
+
+        :param append_new_line: should a new line be added to the end of the message
+        :type append_new_line: bool
         """
         self.template = template
-        assert isinstance(style, TemplateStyle)
+        if not isinstance(style, TemplateStyle):
+            raise ValueError('`style` must be an instance of TemplateStyle')
         self._style = style
+        if append_new_line:
+            self.template += '\n'
 
     @property
     def style(self):
@@ -33,7 +39,8 @@ class Formatter(object):
 
     @style.setter
     def style(self, value):
-        assert isinstance(value, TemplateStyle)
+        if not isinstance(value, TemplateStyle):
+            raise ValueError('`style` must be an instance of TemplateStyle')
         self._style = value
 
     def format_entry(self, params):

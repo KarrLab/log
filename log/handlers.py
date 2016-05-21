@@ -1,5 +1,4 @@
 import codecs
-import syslog
 
 
 class _HandlerInterface(object):
@@ -7,25 +6,12 @@ class _HandlerInterface(object):
     basic interface for message handlers
     """
 
-    def __init__(self, append_new_line=True):
+    def __init__(self, name):
         """
-        :param append_new_line: should a new line be appended to the message
-        :type append_new_line: bool
+        :param name: the name of the handler - these should be unique
+        :type name: str
         """
-        self.append_new_line = append_new_line
-
-    def _append_new_line(self, message):
-        """appends new line to message if `new_line_appended` is True
-
-        :param message: the message to be written
-        :type message: str
-
-        :return: the original message with optionally appended new line char
-        :rtype: str
-        """
-        if self.append_new_line:
-            message = '{message}\n'.format(message=message)
-        return message
+        self.name = name
 
     def write(self, message):
         """writes the message to the configured endpoint
@@ -41,14 +27,18 @@ class StreamHandler(_HandlerInterface):
     a handler for writing messages to a stream, i.e. STDOUT or STDERR
     """
 
-    def __init__(self, stream, *args, **kwargs):
+    def __init__(self, name, stream, *args, **kwargs):
         """
+        :param name: the name of the handler - these should be unique
+        :type name: str
+
         :param stream: stream to be written to
         :type stream: sys.
 
         :param append_new_line: should a new line be appended to the message
         :type append_new_line: bool
         """
+        kwargs['name'] = name
         super(StreamHandler, self).__init__(*args, **kwargs)
         self.stream = stream
 
@@ -58,7 +48,6 @@ class StreamHandler(_HandlerInterface):
         :param message: what you want logged
         :type message: str
         """
-        message = self._append_new_line(message)
         self.stream.write(message)
         self.stream.flush()
 
@@ -69,8 +58,11 @@ class FileHandler(_HandlerInterface):
     the system `logrotate` functionality - it works better than anything you can put together here.
     """
 
-    def __init__(self, filename, mode='a', encoding='utf8', *args, **kwargs):
+    def __init__(self, name, filename, mode='a', encoding='utf8', *args, **kwargs):
         """
+        :param name: the name of the handler - these should be unique
+        :type name: str
+
         :param filename: the name of the file to be written to
         :type filename: str
 
@@ -83,6 +75,7 @@ class FileHandler(_HandlerInterface):
         :param append_new_line: should a new line be appended to the message
         :type append_new_line: bool
         """
+        kwargs['name'] = name
         super(FileHandler, self).__init__(*args, **kwargs)
         self._filename = filename
         self._mode = mode
@@ -95,7 +88,6 @@ class FileHandler(_HandlerInterface):
         :param message: what you want logged
         :type message: str
         """
-        message = self._append_new_line(message)
         self.fh.write(message)
         self.fh.flush()
 
@@ -105,8 +97,11 @@ class SocketHandler(_HandlerInterface):
     a handler for writing logs to a socket. this can be used for network sockets of unix sockets.
     """
 
-    def __init__(self, socket, address, *args, **kwargs):
+    def __init__(self, name, socket, address, *args, **kwargs):
         """
+        :param name: the name of the handler - these should be unique
+        :type name: str
+
         :param socket: a configured socket
         :type socket: socket.socket
 
@@ -126,6 +121,7 @@ class SocketHandler(_HandlerInterface):
         >>> unix_addr = '/tmp/log.sock'
         >>> unix_handler = SocketHandler(unix_sock, unix_addr)
         """
+        kwargs['name'] = name
         super(SocketHandler, self).__init__(*args, **kwargs)
         self.socket = socket
         self._address = address
@@ -137,30 +133,4 @@ class SocketHandler(_HandlerInterface):
         :param message: what you want logged
         :type message: str
         """
-        message = self._append_new_line(message)
         self.socket.sendall(bytes(message, 'utf8'))
-
-
-class SysLogHandler(_HandlerInterface):
-    """
-    a handler for writing log entries to syslog
-    """
-
-    def __init__(self, *args, **kwargs):
-        """
-        :param append_new_line: should a new line be appended to the message
-        :type append_new_line: bool
-        """
-        super(SysLogHandler, self).__init__(*args, **kwargs)
-
-    def write(self, message, level):
-        """writes the message to syslog
-
-        :param message: what you want logged
-        :type message: str
-
-        :param level: the log level of the message
-        :type level: log.levels.LogLevel
-        """
-        message = self._append_new_line(message)
-        syslog.syslog(level.syslog_eq, message)
