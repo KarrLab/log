@@ -5,11 +5,11 @@ import uuid
 
 from capturer import CaptureOutput
 
+from log import Logger
 from log.errors import ConfigurationError
 from log.formatters import Formatter, TemplateStyle
 from log.handlers import StreamHandler
 from log.levels import LogLevel
-from log.loggers import Logger
 
 
 class SimpleLoggerTests(unittest.TestCase):
