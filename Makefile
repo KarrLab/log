@@ -4,11 +4,13 @@ build:
 	virtualenv -p python3 .env
 	. .env/bin/activate
 	pip install -e .
+
+
+build-dev: build
 	pip install -e "file://$(shell pwd)#egg=log[dev]"
-	pip install -e "file://$(shell pwd)#egg=log[arrow]"
 
 
-test: build
+test: build-dev
 	flake8
 	py.test --cov log --cov-report term-missing tests
 

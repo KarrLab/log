@@ -2,7 +2,7 @@
  log
 =====
 
-because you deserve better than log4j
+`because you deserve better than log4j`
 
 .. image:: https://coveralls.io/repos/github/vforgione/log/badge.svg?branch=master
    :target: https://coveralls.io/github/vforgione/log?branch=master
@@ -26,7 +26,7 @@ you can install via pip::
 
 if you want timezone support in the log entries, install the arrow extras::
 
-    $ pip install log[arrow]
+    $ pip install log[timezone]
 
 if you want to contribute, install the dev extras::
 
@@ -45,7 +45,7 @@ clone and run setup.py::
 
 if you want timezone support in the log entries, install the arrow extras::
 
-    $ pip install "file://$(pwd)#egg=log[arrow]"
+    $ pip install "file://$(pwd)#egg=log[timezone]"
 
 if you want to contribute, install the dev extras::
 
