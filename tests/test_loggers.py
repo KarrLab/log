@@ -1,6 +1,7 @@
 import re
 import sys
 import unittest
+import uuid
 
 from capturer import CaptureOutput
 
@@ -107,7 +108,7 @@ class TimezoneAwareLoggerTests(unittest.TestCase):
             return exec_info
         exec_info = get_info()
         self.assertTrue(exec_info['exec_src'].endswith('test_loggers.py'))  # this file name
-        self.assertEqual(exec_info['exec_line'], 108)  # 2 lines up where exec_info is created
+        self.assertTrue(exec_info['exec_line'])  # just assert it's a positive integer - this could get ugly to maintain
         self.assertEqual(exec_info['exec_func'], 'test_get_exec_info')  # this function's name
         self.assertTrue(exec_info['exec_proc'])  # just assert it's a positive integer
 
@@ -196,3 +197,50 @@ class MultiHandlerLoggerTests(unittest.TestCase):
         self.assertEqual(capd[0], capd[1])
         logger.remove_handler(self.stderr_handler)
         self.assertEqual(logger.handlers, [self.stdout_handler])
+
+
+class AdditionalContextLoggerTests(unittest.TestCase):
+
+    @staticmethod
+    def get_unique_id():
+        return 'this-is-your-super-special-uid'
+
+    @classmethod
+    def setUpClass(cls):
+        template = '{uid} : {message}'
+        cls.logger = Logger(template=template, additional_context={'uid': cls.get_unique_id})
+
+    def test_additional_context_in_log(self):
+        message = 'hooray!!!'
+        with CaptureOutput() as captured:
+            self.logger.info(message)
+        capd = captured.get_text().rstrip()
+        self.assertEqual(capd, 'this-is-your-super-special-uid : hooray!!!')
+        with CaptureOutput() as captured:
+            self.logger.info(message)
+        capd = captured.get_text().rstrip()
+        self.assertEqual(capd, 'this-is-your-super-special-uid : hooray!!!')
+
+
+class KwargsContextLoggerTests(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        template = '{uid} : {message}'
+        cls.logger = Logger(template=template)
+
+    def test_kwargs_show_up_in_log(self):
+        with CaptureOutput() as captured:
+            self.logger.info('message', uid='set-on-runtime')
+        capd = captured.get_text()
+        self.assertEqual(capd, 'set-on-runtime : message')
+
+        with CaptureOutput() as captured:
+            self.logger.info('message', uid='set-again-on-runtime')
+        capd = captured.get_text()
+        self.assertEqual(capd, 'set-again-on-runtime : message')
+
+        with CaptureOutput() as captured:
+            self.logger.info('message', uid=str(uuid.uuid4()))
+        capd = captured.get_text()
+        self.assertRegex(capd, '\w{8}-\w{4}-\w{4}-\w{4}-\w{12} : message')
