@@ -13,7 +13,7 @@ test: build
 	py.test --cov log --cov-report term-missing tests
 
 
-push-feature: build
+push-feature: test
 	git push origin $(shell git rev-parse --abbrev-ref HEAD)
 
 
