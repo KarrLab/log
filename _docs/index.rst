@@ -9,14 +9,12 @@
 ----------
 
 .. toctree::
-   :maxdepth: 1
-   :glob:
+   :maxdepth: 2
 
-   installation/index
-   quickstart/index
-   api/index
-   cookbook/index
-   installation/testing
+   installation
+   quickstart
+   api
+   testing
 
 ----------
  Overview
