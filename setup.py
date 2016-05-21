@@ -26,6 +26,21 @@ arrow_requires = [
     'arrow',
 ]
 
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Console',
+    'Environment :: Web Environment',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Information Technology',
+    'Intended Audience :: System Administrators',
+    'License :: OSI Approved :: MIT License',
+    'Natural Language :: English',
+    'Operating System :: MacOS',
+    'Operating System :: POSIX',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+]
+
 
 def get_version(pkg):
     init_py = open(os.path.join(pkg, '__init__.py')).read()
@@ -59,6 +74,7 @@ setup(
     description=description,
     author=author,
     author_email=author_email,
+    classifiers=classifiers,
     packages=get_packages(package),
     extras_require={
         'dev': dev_requires,
