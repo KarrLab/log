@@ -8,7 +8,7 @@ from setuptools import setup
 
 name = 'log'
 package = 'log'
-description = 'because you deserve something better than log4j'
+description = 'because you deserve better than log4j'
 url = 'https://github.com/vforgione/log'
 author = 'Vince Forgione'
 author_email = 'vince.4gione@icloud.com'
