@@ -13,5 +13,9 @@ test: build
 	py.test --cov log --cov-report term-missing tests
 
 
+push-feature: build
+	git push origin $(shell git rev-parse --abbrev-ref HEAD)
+
+
 distribute: test
 	python setup.py sdist upload
