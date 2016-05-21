@@ -96,11 +96,19 @@ class Logger(object):
             if handler.name not in [h.name for h in self._handlers]:
                 self._handlers.append(handler)
 
-        if timezone_aware and not all([timezone, _arrow_available]):
+        if timezone:
+            self.timezone = timezone
+            self._timezone_aware = True
+        elif timezone_aware and not timezone:
+            self.timezone = 'UTC'
+            self._timezone_aware = True
+        elif timezone_aware or timezone and not _arrow_available:
             raise ConfigurationError(
-                'You must specify a timezone string and have arrow installed to use timezone aware timestamps')
-        self._timezone_aware = timezone_aware
-        self.timezone = timezone
+                'To use timezone aware timestamps you must install the [timestamp] extras and specify a '
+                'timezone or set timezone_aware true')
+        else:
+            self._timezone_aware = False
+            self.timezone = None
 
         self._template_keys = self._extract_template_keys()
 
@@ -137,7 +145,7 @@ class Logger(object):
     def make_timezone_aware(self, timezone):
         if not _arrow_available:
             raise ConfigurationError(
-                'You must have arrow installed to use timezone aware timestamps')
+                'To use timezone aware timestamps you must install the [timestamp] extras and specify a timezone')
         self._timezone_aware = True
         self.timezone = timezone
 
