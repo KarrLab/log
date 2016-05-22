@@ -1,4 +1,3 @@
-import syslog
 import unittest
 
 from log.levels import LogLevel
@@ -8,13 +7,6 @@ class LogLevelTests(unittest.TestCase):
 
     def test_order(self):
         self.assertTrue(LogLevel.DEBUG < LogLevel.INFO < LogLevel.WARNING < LogLevel.ERROR < LogLevel.EXCEPTION)
-
-    def test_syslog_eq(self):
-        self.assertEqual(LogLevel.DEBUG.syslog_eq, syslog.LOG_DEBUG)
-        self.assertEqual(LogLevel.INFO.syslog_eq, syslog.LOG_INFO)
-        self.assertEqual(LogLevel.WARNING.syslog_eq, syslog.LOG_WARNING)
-        self.assertEqual(LogLevel.ERROR.syslog_eq, syslog.LOG_ERR)
-        self.assertEqual(LogLevel.EXCEPTION.syslog_eq, syslog.LOG_ERR)
 
     def test_str(self):
         self.assertEqual('DEBUG', str(LogLevel.DEBUG))
@@ -55,12 +47,3 @@ class LogLevelTests(unittest.TestCase):
         self.assertLess(LogLevel.INFO, LogLevel.WARNING)
         self.assertLess(LogLevel.WARNING, LogLevel.ERROR)
         self.assertLess(LogLevel.ERROR, LogLevel.EXCEPTION)
-
-    def test_get_level_for_log_method(self):
-        self.assertEqual(LogLevel.DEBUG, LogLevel.get_level_for_log_method('debug'))
-        self.assertEqual(LogLevel.INFO, LogLevel.get_level_for_log_method('info'))
-        self.assertEqual(LogLevel.WARNING, LogLevel.get_level_for_log_method('warning'))
-        self.assertEqual(LogLevel.ERROR, LogLevel.get_level_for_log_method('error'))
-        self.assertEqual(LogLevel.EXCEPTION, LogLevel.get_level_for_log_method('exception'))
-        with self.assertRaises(ValueError):
-            LogLevel.get_level_for_log_method('informacion')
