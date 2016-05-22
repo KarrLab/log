@@ -1,3 +1,3 @@
 # let's make this mean something:
 # {major}.{minor}.{build}
-__version__ = '1.0.17'
+__version__ = '1.1.32'
