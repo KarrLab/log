@@ -13,6 +13,9 @@
 .. image:: https://img.shields.io/pypi/v/log.svg?style=flat
    :target: https://pypi.python.org/pypi/log
 
+.. image:: https://readthedocs.org/projects/log/badge/?version=latest
+   :target: http://log.readthedocs.io/en/latest/?badge=latest
+
 --------------
  installation
 --------------
@@ -58,4 +61,4 @@ if you want to contribute, install the dev extras::
 
 to run the tests you must either install the dev extras (see above). then, simply run pytest::
 
-    $ py.test --cov log --cov-report term-missing tests
+    $ py.test --cov log --cov-report term-missing tests 
