@@ -24,7 +24,11 @@ class _HandlerInterface(object):
 
 class StreamHandler(_HandlerInterface):
     """
-    a handler for writing messages to a stream, i.e. STDOUT or STDERR
+    ``StreamHandler`` is useful for writing messages to a stream, i.e. STDOUT or STDERR
+
+    >>> import sys
+    >>> handler = StreamHandler('test:sys.stdout', sys.stdout)
+    logz4dayz
     """
 
     def __init__(self, name, stream, *args, **kwargs):
@@ -54,8 +58,14 @@ class StreamHandler(_HandlerInterface):
 
 class FileHandler(_HandlerInterface):
     """
-    a handler for writing messages to a file. __note:__ if you want to rotate the log files, use
-    the system `logrotate` functionality - it works better than anything you can put together here.
+    ``FileHandler`` is useful for writing messages to a file.
+
+    .. note: if you want to rotate the log files, use the system ``logrotate`` functionality - it works
+    better than anything you can put together here.
+
+    >>> fname = '/tmp/test.log'
+    >>> handler = FileHandler('test:fh', fname)
+    ['filed away']
     """
 
     def __init__(self, name, filename, mode='a', encoding='utf8', *args, **kwargs):
@@ -94,7 +104,15 @@ class FileHandler(_HandlerInterface):
 
 class SocketHandler(_HandlerInterface):
     """
-    a handler for writing logs to a socket. this can be used for network sockets of unix sockets.
+    ``SocketHandler`` is useful for writing logs to a socket. this can be used for network sockets of unix sockets.
+
+        >>> import socket
+        >>> net_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        >>> net_addr = ('example.com', 9999)
+        >>> net_handler = SocketHandler('test:net_sock', net_sock, net_addr)
+        >>> unix_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        >>> unix_addr = '/tmp/log.sock'
+        >>> unix_handler = SocketHandler('test:unix_sock', unix_sock, unix_addr)
     """
 
     def __init__(self, name, socket, address, *args, **kwargs):
@@ -110,16 +128,6 @@ class SocketHandler(_HandlerInterface):
 
         :param append_new_line: should a new line be appended to the message
         :type append_new_line: bool
-
-        >>> import socket
-        >>>
-        >>> net_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> net_addr = ('example.com', 9999)
-        >>> net_handler = SocketHandler(net_sock, net_addr)
-        >>>
-        >>> unix_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        >>> unix_addr = '/tmp/log.sock'
-        >>> unix_handler = SocketHandler(unix_sock, unix_addr)
         """
         kwargs['name'] = name
         super(SocketHandler, self).__init__(*args, **kwargs)

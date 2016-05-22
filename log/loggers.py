@@ -24,7 +24,11 @@ PERCENT_REGEX = re.compile('%\((?P<key>\w+)\)\w')
 
 class Logger(object):
     """
-    writes log entries
+    ``Logger`` writes log entries.
+
+    >>> logger = Logger(timezone='America/Chicago')
+    >>> logger.info('really simple logging')
+    [2016-05-21T14:44:31.408652-05:00] [INFO] : really simple logging
     """
 
     DEFAULT_NAME = __name__
@@ -114,6 +118,7 @@ class Logger(object):
 
     @property
     def level(self):
+        """gets/sets the level """
         return self._level
 
     @level.setter
@@ -123,10 +128,12 @@ class Logger(object):
 
     @property
     def formatter_class(self):
+        """ gets the formatter class """
         return self._formatter.__class__
 
     @property
     def formatter(self):
+        """ gets the formatter """
         return self._formatter
 
     @formatter.setter
@@ -136,13 +143,20 @@ class Logger(object):
 
     @property
     def handlers(self):
+        """ gets the handlers """
         return self._handlers
 
     @property
     def is_timezone_aware(self):
+        """ is the logger timezone aware """
         return self._timezone_aware
 
     def make_timezone_aware(self, timezone):
+        """makes the logger timezone aware
+
+        :param timezone: the timezone to normalize the timestamps to
+        :type timezone: str
+        """
         if not _arrow_available:
             raise ConfigurationError(
                 'To use timezone aware timestamps you must install the [timestamp] extras and specify a timezone')
@@ -150,6 +164,7 @@ class Logger(object):
         self.timezone = timezone
 
     def remove_timezone(self):
+        """ removes the timezone and makes the logger not timezone aware """
         self._timezone_aware = False
         self.timezone = None
 

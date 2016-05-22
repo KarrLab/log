@@ -26,6 +26,9 @@ dev_requires = timezone_requires + [
     'capturer',
     'coveralls',
     'flake8',
+    'sphinx',
+    'sphinx-autobuild',
+    'sphinx-rtd-theme',
 ]
 
 classifiers = [
