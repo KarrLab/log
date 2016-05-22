@@ -24,7 +24,11 @@ PERCENT_REGEX = re.compile('%\((?P<key>\w+)\)\w')
 
 class Logger(object):
     """
-    writes log entries
+    ``Logger`` writes log entries.
+
+    >>> logger = Logger(timezone='America/Chicago')
+    >>> logger.info('really simple logging')
+    [2016-05-21T14:44:31.408652-05:00] [INFO] : really simple logging
     """
 
     DEFAULT_NAME = __name__
@@ -96,16 +100,25 @@ class Logger(object):
             if handler.name not in [h.name for h in self._handlers]:
                 self._handlers.append(handler)
 
-        if timezone_aware and not all([timezone, _arrow_available]):
+        if timezone:
+            self.timezone = timezone
+            self._timezone_aware = True
+        elif timezone_aware and not timezone:
+            self.timezone = 'UTC'
+            self._timezone_aware = True
+        elif timezone_aware or timezone and not _arrow_available:
             raise ConfigurationError(
-                'You must specify a timezone string and have arrow installed to use timezone aware timestamps')
-        self._timezone_aware = timezone_aware
-        self.timezone = timezone
+                'To use timezone aware timestamps you must install the [timestamp] extras and specify a '
+                'timezone or set timezone_aware true')
+        else:
+            self._timezone_aware = False
+            self.timezone = None
 
         self._template_keys = self._extract_template_keys()
 
     @property
     def level(self):
+        """gets/sets the level """
         return self._level
 
     @level.setter
@@ -115,10 +128,12 @@ class Logger(object):
 
     @property
     def formatter_class(self):
+        """ gets the formatter class """
         return self._formatter.__class__
 
     @property
     def formatter(self):
+        """ gets the formatter """
         return self._formatter
 
     @formatter.setter
@@ -128,20 +143,28 @@ class Logger(object):
 
     @property
     def handlers(self):
+        """ gets the handlers """
         return self._handlers
 
     @property
     def is_timezone_aware(self):
+        """ is the logger timezone aware """
         return self._timezone_aware
 
     def make_timezone_aware(self, timezone):
+        """makes the logger timezone aware
+
+        :param timezone: the timezone to normalize the timestamps to
+        :type timezone: str
+        """
         if not _arrow_available:
             raise ConfigurationError(
-                'You must have arrow installed to use timezone aware timestamps')
+                'To use timezone aware timestamps you must install the [timestamp] extras and specify a timezone')
         self._timezone_aware = True
         self.timezone = timezone
 
     def remove_timezone(self):
+        """ removes the timezone and makes the logger not timezone aware """
         self._timezone_aware = False
         self.timezone = None
 

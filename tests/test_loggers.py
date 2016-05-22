@@ -5,11 +5,10 @@ import uuid
 
 from capturer import CaptureOutput
 
-from log.errors import ConfigurationError
+from log import Logger
 from log.formatters import Formatter, TemplateStyle
 from log.handlers import StreamHandler
 from log.levels import LogLevel
-from log.loggers import Logger
 
 
 class SimpleLoggerTests(unittest.TestCase):
@@ -66,7 +65,7 @@ class TimezoneAwareLoggerTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.logger = Logger(timezone_aware=True, timezone='America/Chicago')
+        cls.logger = Logger(timezone='America/Chicago')
         cls.log_regex = re.compile('\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}-05:00\] \[\w+\] : .*')
 
     def test_info(self):
@@ -76,10 +75,6 @@ class TimezoneAwareLoggerTests(unittest.TestCase):
         capd = captured.get_text()
         self.assertRegex(capd, self.log_regex)
         self.assertTrue(capd.endswith('[INFO] : {output}'.format(output=output)))
-
-    def test_setup_without_timezone(self):
-        with self.assertRaises(ConfigurationError):
-            Logger(timezone_aware=True)
 
     def test_is_timezone_aware(self):
         self.assertTrue(self.logger.is_timezone_aware)
@@ -100,6 +95,10 @@ class TimezoneAwareLoggerTests(unittest.TestCase):
     def test_get_timestamp(self):
         ts = self.logger._get_timestamp()
         self.assertRegex(ts, '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}-05:00')
+
+    def test_blank_timezone_set_to_utc(self):
+        logger = Logger(timezone_aware=True)
+        self.assertEqual(logger.timezone, 'UTC')
 
     def test_get_exec_info(self):
         # need to flub this a little

@@ -3,7 +3,8 @@ from enum import Enum
 
 class TemplateStyle(Enum):
     """
-    message template interpolation controls
+    ``TemplateStyle`` is an enum for controlling template interpolation. ``log`` supports only named
+    template variables using only modern interpolation methods.
     """
 
     PERCENT = '%(param)s'
@@ -12,7 +13,12 @@ class TemplateStyle(Enum):
 
 class Formatter(object):
     """
-    a simple wrapper for interpolating message strings
+    ``Formatter`` is a simple wrapper for interpolating log entry templates and context variables.
+
+    >>> template = '[{timestamp}] [{level}] : {message}'
+    >>> formatter = Formatter(template, TemplateStyle.BRACES)
+    >>> formatter.format_entry({'timestamp': 'now', 'level': 'red alert', 'message': 'ohaii'})
+    [now] [red alert] : ohaii
     """
 
     def __init__(self, template, style, append_new_line=True):
