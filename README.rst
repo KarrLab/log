@@ -13,6 +13,9 @@
 .. image:: https://img.shields.io/pypi/v/log.svg?style=flat
    :target: https://pypi.python.org/pypi/log
 
+.. image:: https://readthedocs.org/projects/log/badge/?version=latest
+   :target: http://log.readthedocs.io/en/latest/?badge=latest
+
 --------------
  installation
 --------------
