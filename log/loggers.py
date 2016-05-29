@@ -1,28 +1,22 @@
 import inspect
 import os
-import re
 import sys
 import traceback
 from datetime import datetime
 
-from .errors import ConfigurationError
-from .formatters import Formatter, TemplateStyle
+from .errors import ConfigurationError, FormatterNotFoundError
+from .formatters import Formatter
 from .handlers import _HandlerInterface, StreamHandler
 from .levels import LogLevel
 
 try:
     import arrow
     _arrow_available = True
-except ImportError:  # pragma: no cover
+except ImportError:           # pragma: no cover
     _arrow_available = False  # pragma: no cover
 
 
-BRACES_REGEX = re.compile('\{(?P<key>\w+)\}')
-
-PERCENT_REGEX = re.compile('%\((?P<key>\w+)\)\w')
-
-
-class Logger(object):
+class Logger:
     """
     ``Logger`` writes log entries.
 
@@ -31,187 +25,296 @@ class Logger(object):
     [2016-05-21T14:44:31.408652-05:00] [INFO] : really simple logging
     """
 
-    DEFAULT_NAME = __name__
-    DEFAULT_LOG_LEVEL = LogLevel.INFO
-    DEFAULT_LOG_TEMPLATE = '[{timestamp}] [{level}] : {message}'
-    DEFAULT_LOG_STYLE = TemplateStyle.BRACES
-    DEFAULT_FORMATTER_CLASS = Formatter
-    DEFAULT_HANDLERS = [StreamHandler(name='default:sys.stdout', stream=sys.stdout)]
-    DEFAULT_TIMEZONE_AWARE = False
-    DEFAULT_TIMEZONE = None
-    DEFAULT_ADDITIONAL_CONTEXT = {}
+    DEFAULT_TEMPLATE = '[{timestamp}] [{level}] : {message}'
+    BASE_LOG_PARAMS = ['timestamp', 'level', 'name', 'message', 'src', 'line', 'func', 'proc']
 
-    BASE_LOG_PARAMS = ['timestamp', 'level', 'name', 'message', 'exec_src', 'exec_line', 'exec_func', 'exec_proc']
-
-    def __init__(self, name=DEFAULT_NAME, level=DEFAULT_LOG_LEVEL, template=DEFAULT_LOG_TEMPLATE,
-                 style=DEFAULT_LOG_STYLE, formatter_class=DEFAULT_FORMATTER_CLASS, handlers=DEFAULT_HANDLERS,
-                 timezone_aware=DEFAULT_TIMEZONE_AWARE, timezone=DEFAULT_TIMEZONE,
-                 additional_context=DEFAULT_ADDITIONAL_CONTEXT):
+    def __init__(self, name=None, level=None, template=None, formatters=None, handlers=None, timezone=None,
+                 additional_context=None):
         """
-        :param name: the name of the logger - defaults to `__name__`
+        :param name: the name of the logger
         :type name: str
-
-        :param level: the minimum log level to write - defaults to `log.levels.LogLevel.INFO`
-        :type level: log.levels.LogLevel
-
-        :param template: the template used to format the log entries -
-            defaults to `'[{timestamp}] [{level}] : {message}'`
+        :param level: the minimum logging level
+        :type level: LogLevel
+        :param template: the template to format the log entries
         :type template: str
-
-        :param style: the formatter style to use for the template - defaults to `log.formatters.TemplateStyle.BRACES`
-        :type style: log.formatters.TemplateStyle
-
-        :param formatter_class: the class signature of the formatter to be used - defaults to `log.formatters.Formatter`
-        :type formatter_class: log.formatters.Formatter
-
-        :param handlers: a list of configured handlers - defaults to `[StreamHandler(sys.stdout)]`
-        :type handlers: []
-
-        :param timezone_aware: should timestamps include timezones; requires `arrow` for use - defaults to `False`
-        :type timezone_aware: bool
-
-        :param timezone: a timezone string parseable by arrow - defaults to `None`
+        :param formatters: a list of formatters to use for formatting message
+        :type formatters: Formatter
+        :param handlers: a list of handlers to write the messages
+        :type handlers: _HandlerInterface
+        :param timezone: the name of the timezone to convert the timestamp to
         :type timezone: str
-
-        :param additional_context: additional key/values to inject into the template that aren't
-            included in RESERVED_LOG_PARAMS
+        :param additional_context: values to inject for additional formatting context
         :type additional_context: dict
         """
-        self.name = name
-        self.additional_context = additional_context
+        self.name = name or __name__
+        self.level = level or LogLevel.INFO
+        self.additional_context = additional_context or dict()
 
-        if not isinstance(level, LogLevel):
-            raise ValueError('`level` must be an instance of LogLevel')
-        self._level = level
+        self._handlers = set()
+        self._formatters = set()
+        self._default_formatter = None
+        self._template = None
+        self._timezone = None
 
-        self.template = template
-        if not isinstance(style, TemplateStyle):
-            raise ValueError('`style` must be an instance of TemplateStyle')
+        handlers = handlers or [StreamHandler(stream=sys.stdout)]
+        for handler in handlers:
+            self.add_handler(handler)
 
-        self._style = style
-        if not issubclass(formatter_class, Formatter):
-            raise TypeError('`formatter_class` must be one or subclass of Formatter')
-        self._formatter = formatter_class(template, style)
+        formatters = formatters or [Formatter(template=self.DEFAULT_TEMPLATE)]
+        for formatter in formatters:
+            self.add_formatter(formatter)
 
-        self._handlers = []
-        for i, handler in enumerate(handlers):
-            if not isinstance(handler, _HandlerInterface):
-                raise ValueError('`handlers[{i}]` does not implement _HandlerInterface'.format(i=i))
-            if handler.name not in [h.name for h in self._handlers]:
-                self._handlers.append(handler)
+        self._default_formatter = list(filter(lambda f: f.name == 'default', self._formatters))[0]
+
+        if template:
+            self._apply_template_to_formatters(template)
+            self._template = template
+        else:
+            self._template = self.DEFAULT_TEMPLATE
 
         if timezone:
-            self.timezone = timezone
-            self._timezone_aware = True
-        elif timezone_aware and not timezone:
-            self.timezone = 'UTC'
-            self._timezone_aware = True
-        elif timezone_aware or timezone and not _arrow_available:
-            raise ConfigurationError(
-                'To use timezone aware timestamps you must install the [timestamp] extras and specify a '
-                'timezone or set timezone_aware true')
+            self._set_timezone(timezone)
         else:
-            self._timezone_aware = False
-            self.timezone = None
+            self._timezone = None
 
-        self._template_keys = self._extract_template_keys()
+    def __enter__(self):
+        return self
 
-    @property
-    def level(self):
-        """gets/sets the level """
-        return self._level
-
-    @level.setter
-    def level(self, level):
-        assert isinstance(level, LogLevel)
-        self._level = level
-
-    @property
-    def formatter_class(self):
-        """ gets the formatter class """
-        return self._formatter.__class__
-
-    @property
-    def formatter(self):
-        """ gets the formatter """
-        return self._formatter
-
-    @formatter.setter
-    def formatter(self, formatter):
-        assert isinstance(formatter, Formatter)
-        self._formatter = formatter
+    def __exit__(self, *args, **kwargs):
+        return self
 
     @property
     def handlers(self):
-        """ gets the handlers """
         return self._handlers
 
     @property
-    def is_timezone_aware(self):
-        """ is the logger timezone aware """
-        return self._timezone_aware
+    def formatters(self):
+        return self._formatters
 
-    def make_timezone_aware(self, timezone):
-        """makes the logger timezone aware
+    @property
+    def default_formatter(self):
+        return self._default_formatter
 
-        :param timezone: the timezone to normalize the timestamps to
-        :type timezone: str
-        """
-        if not _arrow_available:
-            raise ConfigurationError(
-                'To use timezone aware timestamps you must install the [timestamp] extras and specify a timezone')
-        self._timezone_aware = True
-        self.timezone = timezone
+    @default_formatter.setter
+    def default_formatter(self, formatter):
+        old_default = self._default_formatter
+        self._formatters.remove(old_default)
+        formatter.name = 'default'
+        self.add_formatter(formatter)
+        self.add_formatter(old_default)
 
-    def remove_timezone(self):
-        """ removes the timezone and makes the logger not timezone aware """
-        self._timezone_aware = False
-        self.timezone = None
+    @property
+    def template(self):
+        return self._template
 
-    def add_handler(self, handler):
-        """adds a new handler to the list of handlers
+    @template.setter
+    def template(self, template):
+        self._apply_template_to_formatters(template)
+        self._template = template
 
-        :param handler: a new handler to log out entries
-        :type handler: log.handlers._HandlerInterface
-        """
-        if not isinstance(handler, _HandlerInterface):
-            raise ValueError('`handler` does not implement _HandlerInterface')
-        if handler.name not in [h.name for h in self._handlers]:
-            self._handlers.append(handler)
+    @property
+    def timezone(self):
+        return self._timezone
 
-    def remove_handler(self, handler):
-        """removes a handler from the list of handlers
+    @timezone.setter
+    def timezone(self, timezone):
+        self._set_timezone(timezone)
 
-        :param handler: the handler to be removed
-        :type handler: log.handlers._HandlerInterface
-        """
-        self._handlers.remove(handler)
+    def debug(self, message, **kwargs):
+        """writes a debug log entry
 
-    def _extract_template_keys(self):
-        """ extracts all keys from the log entry template """
-        if self._style is TemplateStyle.BRACES:
-            return BRACES_REGEX.findall(self.template)
-        return PERCENT_REGEX.findall(self.template)
+        :param message: the message of the log entry
+        :param message: str
 
-    def _log(self, message, level, exception=None, **kwargs):  # pragma: no cover
-        """formats the message and writes it out via the handlers
-
-        :param message: the information to be logged
-        :type message: str
-
-        :param level: the level of the log message
-        :type level: log.levels.LogLevel
-
-        :param kwargs: arbitrary key/values to inject into the template at write time
+        :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
         :type kwargs: dict
         """
+        if self.level <= LogLevel.DEBUG:
+            self._log(message, LogLevel.DEBUG, **kwargs)
+
+    def info(self, message, **kwargs):
+        """writes an informational log entry
+
+        :param message: the message of the log entry
+        :param message: str
+
+        :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+        :type kwargs: dict
+        """
+        if self.level <= LogLevel.INFO:
+            self._log(message, LogLevel.INFO, **kwargs)
+
+    def warning(self, message, **kwargs):
+        """writes a warning log entry
+
+        :param message: the message of the log entry
+        :param message: str
+
+        :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+        :type kwargs: dict
+        """
+        if self.level <= LogLevel.WARNING:
+            self._log(message, LogLevel.WARNING, **kwargs)
+
+    def error(self, message, **kwargs):
+        """writes an error log entry
+
+        :param message: the message of the log entry
+        :param message: str
+
+        :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+        :type kwargs: dict
+        """
+        self._log(message, LogLevel.ERROR, **kwargs)
+
+    def exception(self, exception):
+        """writes an exception and traceback log entry
+
+        :param exception: the caught exception
+        :param exception: Exception
+        """
+        self._log(message=str(exception), level=LogLevel.EXCEPTION, exception=exception)
+
+    def add_handler(self, handler):
+        """adds a handler to the logger
+
+        :param handler: the handler to be added
+        :type handler: _HandlerInterface
+        """
+        self._name_handler(handler)
+        self._handlers |= {handler}
+
+    def remove_handler(self, handler):
+        """removes a handler from the logger
+
+        :param handler: the handler to be removed
+        :type handler: _HandlerInterface
+        """
+        self._handlers.remove(handler)
+        remaining_handlers = [h for h in self._handlers]
+        self._handlers.clear()
+        for handler in remaining_handlers:
+            handler.name = None
+            self.add_handler(handler)
+
+    def add_formatter(self, formatter):
+        """adds a formatter to the logger
+
+        :param formatter: the formatter to be added
+        :type formatter: Formatter
+        """
+        self._name_formatter(formatter)
+        self._formatters |= {formatter}
+
+    def remove_formatter(self, formatter):
+        """removes a formatter from the logger
+
+        :param formatter: the formatter to be removed
+        :type formatter: Formatter
+        """
+        reassign_to_first = formatter.name == 'default'
+        self._formatters.remove(formatter)
+        if len(self._formatters) == 1 or reassign_to_first:
+            last_formatter = self._formatters.pop()
+            last_formatter.name = 'default'
+            self._formatters |= {last_formatter}
+            self._default_formatter = last_formatter
+
+    def clone(self):
+        """creates a copy of the logger instance
+
+        :returns: a copy of the current logger
+        """
+        logger = Logger()
+        logger.name = self.name
+        logger.level = self.level
+        logger.additional_context = self.additional_context
+        logger._handlers = self._handlers
+        logger._formatters = self._formatters
+        logger._default_formatter = self._default_formatter
+        logger._template = self._template
+        logger._timezone = self._timezone
+        return logger
+
+    def using(self, formatter):
+        """specifies a particular formatter to be used when you want a non-default
+
+        :param formatter: the name or instance of a logger's formatter
+        :type formatter: str or Formatter
+
+        :returns: a clone of the logger with the selected formatter set as the only formatter
+
+        :raises: FormatterNotFoundError
+
+        >>> logger = Logger()
+        >>> formatter = Formatter(template='SOMETHING WENT TERRIBLY WRONG: {message}', name='terribly_wrong')
+        >>> logger.add_formatter(formatter)
+        >>> try:
+        ...     something_really_dangerous()
+        ... except Exception as e:
+        ...     logger.info('oh shit!')
+        ...     with logger.using('terribly_wrong') as lgr:
+        ...         lgr.exception(e)
+        ...
+        [2016-05-28T14:23:32.089234] [INFO] : oh shit!
+        SOMETHING WENT TERRIBLY WRONG: error description and traceback
+        """
+        if isinstance(formatter, Formatter):
+            formatter_name = formatter.name
+        else:
+            formatter_name = formatter
+        try:
+            existing_formatter = list(filter(lambda f: f.name == formatter_name, self._formatters))[0]
+            # if it isn't the default formatter here, we don't want to override it with side effects from the clone
+            new_formatter = Formatter(
+                name='default', template=existing_formatter.template,
+                append_new_line=existing_formatter.append_new_line)
+        except IndexError:
+            raise FormatterNotFoundError("Couldn't find formatter {}".format(formatter_name))
+        clone = self.clone()
+        clone._formatters = {new_formatter}
+        clone._default_formatter = new_formatter
+        return clone
+
+    def only(self, *handlers):
+        """specifies particular handlers to write the message
+
+        :param handlers: one or more handlers to write the message
+        :type handlers: str or _HandlerInterface
+
+        :return: a clone of the logger with the selected handlers set as the only handlers
+
+        >>> logger = Logger()  # defaults to one handler with sys.stdour
+        >>> stderr = StreamHandler(sys.stderr, name='stderr')
+        >>> err_log = FileHandler('/var/log/err.log', name='err_log')
+        >>> logger.add_handler(stderr)
+        >>> logger.add_handler(err_log)
+        >>> with logger.only('stderr', 'err_log') as lgr:
+        ...     lgr.error('blerg. something screwed up')  # only writes to log and stderr, not stdout
+        """
+        handler_names = []
+        for handler in handlers:
+            if isinstance(handler, _HandlerInterface):
+                handler_names.append(handler.name)
+            else:
+                handler_names.append(handler)
+        handlers = set(filter(lambda h: h.name in handler_names, self._handlers))
+        clone = self.clone()
+        clone._handlers = handlers
+        return clone
+
+    def _log(self, message, level, exception=None, formatter=None, handlers=None, **context):
         params = {'message': message, 'level': level, 'name': self.name}
 
-        if 'timestamp' in self._template_keys:
+        if formatter is None:
+            formatter = self._default_formatter
+        template_keys = formatter.extract_template_keys()
+
+        if 'timestamp' in template_keys:
             params['timestamp'] = self._get_timestamp()
 
-        if {'exec_src', 'exec_line', 'exec_func', 'exec_proc'}.intersection(set(self._template_keys)):
-            exec_info = self._get_exec_info()
+        if {'src', 'line', 'func', 'proc'}.intersection(set(template_keys)):
+            exec_info = self._get_execution_info()
             params.update(exec_info)
 
         if exception:
@@ -223,92 +326,61 @@ class Logger(object):
             else:
                 params[key] = value
 
-        for key, value in kwargs.items():
+        for key, value in context.items():
             params[key] = value
 
-        log_line = self._formatter.format_entry(params)
-        for handler in self._handlers:
+        log_line = formatter.format(**params)
+        if handlers is None:
+            handlers = self._handlers
+        for handler in handlers:
             handler.write(log_line)
 
     def _get_timestamp(self):
-        """gets a formatted timestamp
-
-        :return: the current time in ISO 8601 string format
-        :rtype: str
-        """
-        if self._timezone_aware:
-            ts = arrow.utcnow().to(self.timezone)
+        if self._timezone:
+            ts = arrow.utcnow().to(self._timezone)
         else:
             ts = datetime.now()
         ts = ts.isoformat()
         return ts
 
-    def _get_exec_info(self):
-        """gets execution information
-
-        :return: a dictionary of execution infomation
-        :rtype: dict
-        """
+    def _get_execution_info(self):
         frame = sys._getframe(2)
         fname, line, funcname, _, __ = inspect.getframeinfo(frame)
         return {
-            'exec_src': fname,
-            'exec_func': funcname,
-            'exec_line': line,
-            'exec_proc': os.getpid(),
+            'src': fname,
+            'func': funcname,
+            'line': line,
+            'proc': os.getpid(),
         }
 
-    def debug(self, message, **kwargs):
-        """writes a debug line
+    def _name_handler(self, handler):
+        if handler.name:
+            return handler.name
+        type_of_handler = type(handler)
+        like_handlers = list(filter(lambda h: isinstance(h, type_of_handler), self._handlers))
+        num_like_handlers = len(like_handlers)
+        name = '{}{}'.format(type_of_handler.__name__, num_like_handlers)
+        handler.name = name
+        return name
 
-        :param message: the message to log out
-        :type message: str
+    def _name_formatter(self, formatter):
+        if formatter.name:
+            return formatter.name
+        num_formatters = len(self._formatters)
+        if num_formatters == 0:
+            name = 'default'
+        else:
+            name = 'Formatter{}'.format(num_formatters)
+        formatter.name = name
+        return name
 
-        :param kwargs: arbitrary key/values to inject into the template at write time
-        :type kwargs: dict
-        """
-        if self._level <= LogLevel.DEBUG:
-            self._log(message, LogLevel.DEBUG, **kwargs)
+    def _apply_template_to_formatters(self, template):
+        for formatter in self._formatters:
+            formatter.template = template
 
-    def info(self, message, **kwargs):
-        """writes an info line
-
-        :param message: the message to log out
-        :type message: str
-
-        :param kwargs: arbitrary key/values to inject into the template at write time
-        :type kwargs: dict
-        """
-        if self._level <= LogLevel.INFO:
-            self._log(message, LogLevel.INFO, **kwargs)
-
-    def warning(self, message, **kwargs):
-        """writes a warning line
-
-        :param message: the message to log out
-        :type message: str
-
-        :param kwargs: arbitrary key/values to inject into the template at write time
-        :type kwargs: dict
-        """
-        if self._level <= LogLevel.WARNING:
-            self._log(message, LogLevel.WARNING, **kwargs)
-
-    def error(self, message, **kwargs):
-        """writes an error line
-
-        :param message: the message to log out
-        :type message: str
-
-        :param kwargs: arbitrary key/values to inject into the template at write time
-        :type kwargs: dict
-        """
-        self._log(message, LogLevel.ERROR, **kwargs)
-
-    def exception(self, exception):
-        """writes an exception string and stack trace
-
-        :param exception: a raised exception
-        :type exception: Exception
-        """
-        self._log(message=str(exception), level=LogLevel.EXCEPTION, exception=exception)
+    def _set_timezone(self, timezone):
+        if _arrow_available:
+            self._timezone = timezone
+        else:
+            raise ConfigurationError(
+                "You must install the 'timezone' extra target to use timezone aware time stamps")

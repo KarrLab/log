@@ -9,34 +9,50 @@
 which provides sane defaults and easy logging functionality. This, however, is not the full capabilities of the
 library. Under the hood there's a much more powerful API that can be accessed and customized.
 
---------
- errors
---------
-
-.. autoclass:: log.errors.ConfigurationError
-
---------
- levels
---------
-
-.. autoclass:: log.levels.LogLevel
-
-
 ------------
- formatters
+ log.errors
 ------------
 
-.. autoclass:: log.formatters.TemplateStyle
+.. currentmodule:: log.errors
 
-.. autoclass:: log.formatters.Formatter()
+.. autoclass:: BadTemplateError
+
+.. autoclass:: ConfigurationError
+
+.. autoclass:: HandlerNotFoundError
+
+.. autoclass:: FormatterNotFoundError
+
+------------
+ log.levels
+------------
+
+.. currentmodule:: log.levels
+
+.. autoclass:: LogLevel
+
+----------------
+ log.formatters
+----------------
+
+.. currentmodule:: log.formatters
+
+.. autoclass:: TemplateStyle
+   :members:
+
+.. autoclass:: Formatter
    :special-members: __init__
    :members:
 
-----------
- handlers
-----------
+--------------
+ log.handlers
+--------------
 
-.. autoclass:: log.handlers.StreamHandler()
+.. currentmodule:: log.handlers
+
+.. autoclass:: _HandlerInterface
+
+.. autoclass:: StreamHandler
    :special-members: __init__
    :members:
 
@@ -48,11 +64,12 @@ library. Under the hood there's a much more powerful API that can be accessed an
    :special-members: __init__
    :members:
 
----------
- loggers
----------
+-------------
+ log.loggers
+-------------
 
-.. autoclass:: log.loggers.Logger()
+.. currentmodule:: log.loggers
+
+.. autoclass:: Logger
    :special-members: __init__
    :members:
-   :undoc-members:

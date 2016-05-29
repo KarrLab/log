@@ -7,11 +7,11 @@ class LogLevel(Enum):
     level any logger call to a level less than that minimum will be discarded.
     """
 
-    DEBUG = 0       # logs verbose information
-    INFO = 1        # logs general information
-    WARNING = 2     # logs warning information
-    ERROR = 3       # logs error information
-    EXCEPTION = 4   # logs exception stack traces
+    DEBUG = 0      # logs verbose information
+    INFO = 1       # logs general information
+    WARNING = 2    # logs warning information
+    ERROR = 3      # logs error information
+    EXCEPTION = 4  # logs exception stack traces
 
     def __str__(self):
         return self.name.upper()

@@ -1,5 +1,17 @@
-version = '1.1'
-release = '1.1'
+import os
+import re
+
+
+def get_version():
+    docs_dir = os.path.dirname(__file__)
+    proj_dir = os.path.dirname(docs_dir)
+    version_file = os.path.join(proj_dir, 'log', '__version__.py')
+    init_py = open(version_file).read()
+    return re.search("^__version__ = ['\"]([^'\"]+)['\"]", init_py, re.MULTILINE).group(1)
+
+
+version = get_version()
+release = version
 
 
 extensions = [

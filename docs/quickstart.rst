@@ -174,3 +174,37 @@ Which would produce::
     [e3603948-8058-4e26-81d3-1878c893f53f] [ERROR] : error
     [yay special cases] [INFO] : this was added when `info` was called
     [6a791cdc-1033-4d07-aaa0-0a4919121a27] [INFO] : back to normal
+
+
+--------------------
+ Context Management
+--------------------
+
+``log`` employs simple context management for `Logger`s. If you have sever formatters or handlers or both setup and
+find yourself needing to switch between them in given situations, doing so is trivial using a `with` block::
+
+    #!/usr/bin/env python
+
+    import sys
+
+    from log import Logger
+    from log.formatters import Formatter
+    from log.handlers import StreamHandler
+
+
+    logger = Logger()  # default formatter and stdout handler
+    err_formatter = Formatter(template='OH CRAP: {message}', name='err')
+    logger.add_formatter(err_formatter)
+    err_handler = StreamHandler(stream=sys.stderr, name='err')
+    logger.add_handler(err_handler)
+
+    logger.info('info!!!')  # uses default formatter and writes to stdout and stderr
+
+    with logger.using(err_formatter) as err_logger:
+        err_logger.warning('watch out')  # uses the 'err' formatter and writes to stdout and stderr
+
+    with logger.only(err_handler) as err_logger:
+        err_logger.warning('watch out again!')  # writes to only stderr using the default formatter
+
+    with logger.using('err').only('err') as err_logger:  # you can use their names instead
+        err_logger.error('air or')  # uses the 'oh crap' format and only writes it to stderr

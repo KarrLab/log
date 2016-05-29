@@ -1,6 +1,6 @@
 [report]
 ignore_errors = True
 exclude_lines =
-    raise
     pragma: no cover
     __version__
+    NotImplementedError
