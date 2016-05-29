@@ -5,241 +5,296 @@ import uuid
 
 from capturer import CaptureOutput
 
-from log import Logger
-from log.formatters import Formatter, TemplateStyle
+from log import loggers
+from log.errors import BadTemplateError, FormatterNotFoundError, ConfigurationError
+from log.formatters import Formatter
 from log.handlers import StreamHandler
 from log.levels import LogLevel
+from log.loggers import Logger
 
 
-class SimpleLoggerTests(unittest.TestCase):
+DEFAULT_LOG_LINE_REGEX = re.compile('\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6}[\+|-]\d{2}:\d{2}\] \[[A-Z]+\] : .*')
 
-    @classmethod
-    def setUpClass(cls):
-        cls.logger = Logger(level=LogLevel.DEBUG)
-        cls.log_regex = re.compile('\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\] \[\w+\] : .*')
+
+class LoggerLoggingMethodsTests:
 
     def test_debug(self):
-        output = 'too much'
-        with CaptureOutput() as captured:
-            self.logger.debug(output)
-        capd = captured.get_text()
-        self.assertRegex(capd, self.log_regex)
-        self.assertTrue(capd.endswith('[DEBUG] : {output}'.format(output=output)))
+        with CaptureOutput() as co:
+            self.logger.debug('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        self.assertTrue(co.endswith('[DEBUG] : message'))
 
     def test_info(self):
-        output = 'ohaiii'
-        with CaptureOutput() as captured:
-            self.logger.info(output)
-        capd = captured.get_text()
-        self.assertRegex(capd, self.log_regex)
-        self.assertTrue(capd.endswith('[INFO] : {output}'.format(output=output)))
+        with CaptureOutput() as co:
+            self.logger.info('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        self.assertTrue(co.endswith('[INFO] : message'))
 
     def test_warning(self):
-        output = 'booooo'
-        with CaptureOutput() as captured:
-            self.logger.warning(output)
-        capd = captured.get_text()
-        self.assertRegex(capd, self.log_regex)
-        self.assertTrue(capd.endswith('[WARNING] : {output}'.format(output=output)))
+        with CaptureOutput() as co:
+            self.logger.warning('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        self.assertTrue(co.endswith('[WARNING] : message'))
 
     def test_error(self):
-        output = 'nooope'
-        with CaptureOutput() as captured:
-            self.logger.error(output)
-        capd = captured.get_text()
-        self.assertRegex(capd, self.log_regex)
-        self.assertTrue(capd.endswith('[ERROR] : {output}'.format(output=output)))
+        with CaptureOutput() as co:
+            self.logger.error('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        self.assertTrue(co.endswith('[ERROR] : message'))
 
     def test_exception(self):
-        with CaptureOutput() as captured:
+        with CaptureOutput() as co:
             try:
                 1 / 0
-            except ZeroDivisionError as e:
-                self.logger.exception(e)
-        capd = captured.get_lines()
-        self.assertRegex(capd[0], self.log_regex)
-        self.assertEqual(capd[-1], 'ZeroDivisionError: division by zero')
+            except ZeroDivisionError:
+                self.logger.exception('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        split_co = co.splitlines()
+        self.assertTrue(len(split_co) > 1)
+        self.assertTrue(split_co[0].endswith('[EXCEPTION] : message'))
 
 
-class TimezoneAwareLoggerTests(unittest.TestCase):
+class LoggerLoggingMethodsBracesTemplateTests(LoggerLoggingMethodsTests, unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        cls.logger = Logger(timezone='America/Chicago')
-        cls.log_regex = re.compile('\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}-05:00\] \[\w+\] : .*')
-
-    def test_info(self):
-        output = 'ohaiii'
-        with CaptureOutput() as captured:
-            self.logger.info(output)
-        capd = captured.get_text()
-        self.assertRegex(capd, self.log_regex)
-        self.assertTrue(capd.endswith('[INFO] : {output}'.format(output=output)))
-
-    def test_is_timezone_aware(self):
-        self.assertTrue(self.logger.is_timezone_aware)
-        logger = Logger()
-        self.assertFalse(logger.is_timezone_aware)
-
-    def test_make_timezone_aware(self):
-        logger = Logger()
-        self.assertFalse(logger.is_timezone_aware)
-        logger.make_timezone_aware('America/Chicago')
-        self.assertTrue(self.logger.is_timezone_aware)
-
-    def test_remove_timezone(self):
-        self.assertTrue(self.logger.is_timezone_aware)
-        self.logger.remove_timezone()
-        self.assertFalse(self.logger.is_timezone_aware)
-
-    def test_get_timestamp(self):
-        ts = self.logger._get_timestamp()
-        self.assertRegex(ts, '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}-05:00')
-
-    def test_blank_timezone_set_to_utc(self):
-        logger = Logger(timezone_aware=True)
-        self.assertEqual(logger.timezone, 'UTC')
-
-    def test_get_exec_info(self):
-        # need to flub this a little
-        def get_info():
-            exec_info = self.logger._get_exec_info()
-            return exec_info
-        exec_info = get_info()
-        self.assertTrue(exec_info['exec_src'].endswith('test_loggers.py'))  # this file name
-        self.assertTrue(exec_info['exec_line'])  # just assert it's a positive integer - this could get ugly to maintain
-        self.assertEqual(exec_info['exec_func'], 'test_get_exec_info')  # this function's name
-        self.assertTrue(exec_info['exec_proc'])  # just assert it's a positive integer
+    def setUp(self):
+        self.logger = Logger('test-logger', LogLevel.DEBUG, timezone='America/Chicago')
 
 
-class GetterSetterLoggerTests(unittest.TestCase):
+class LoggerLoggingMethodsPercentTemplateTests(LoggerLoggingMethodsTests, unittest.TestCase):
+
+    def setUp(self):
+        self.logger = Logger('test-logger', LogLevel.DEBUG, timezone='America/Chicago',
+            template='[%(timestamp)s] [%(level)s] : %(message)s')
+
+
+class LoggerPropertiesTests(unittest.TestCase):
+
+    def setUp(self):
+        self.logger = Logger('test-logger', LogLevel.DEBUG, timezone='America/Chicago')
+
+    def test_set_default_formatter(self):
+        formatter = Formatter(template='{message}', append_new_line=False)
+        self.logger.default_formatter = formatter
+        new_default_formatter = self.logger.default_formatter
+        self.assertEqual(new_default_formatter, formatter)
+
+    def test_get_template(self):
+        template = self.logger.template
+        self.assertEqual(template, Logger.DEFAULT_TEMPLATE)
+
+    def test_set_template(self):
+        new_template = '{message}'
+        self.logger.template = new_template
+        template = self.logger.template
+        self.assertEqual(template, new_template)
+        for formatter in self.logger.formatters:
+            self.assertEqual(formatter.template, new_template)
+
+    def test_get_timezone(self):
+        self.assertEqual(self.logger.timezone, 'America/Chicago')
+
+    def test_set_timezone(self):
+        self.logger.timezone = 'America/New York'
+        self.assertEqual(self.logger.timezone, 'America/New York')
+
+
+class LoggerRemoveStuffTests(unittest.TestCase):
 
     def setUp(self):
         self.logger = Logger()
 
-    def test_get_level(self):
-        self.assertEqual(self.logger.level, LogLevel.INFO)
-
-    def test_set_level(self):
-        self.logger.info('stuff')
-        self.logger.level = LogLevel.WARNING
-        with CaptureOutput() as captured:
-            self.logger.info('this should not show up')
-        capd = captured.get_text()
-        self.assertEqual(capd, '')
-
-    def test_set_level_error(self):
-        with self.assertRaises(AssertionError):
-            self.logger.level = 'unknown'
-
-    def test_get_formatter_class(self):
-        self.assertEqual(self.logger.formatter_class, Formatter)
-
-    def test_get_formatter(self):
-        class DerpFormatter(Formatter):
-            pass
-        logger = Logger(formatter_class=DerpFormatter)
-        derp = DerpFormatter(Logger.DEFAULT_LOG_TEMPLATE, TemplateStyle.BRACES)
-        self.assertEqual(logger.formatter.template, derp.template)
-
-    def test_set_formatter(self):
-        formatter = Formatter('{message}', TemplateStyle.BRACES)
-        self.logger.formatter = formatter
-        message = 'yay simple'
-        with CaptureOutput() as captured:
-            self.logger.info(message)
-        capd = captured.get_text()
-        self.assertEqual(capd, message)
-
-    def test_get_handlers(self):
-        handlers = self.logger.handlers
-        self.assertEqual(1, len(handlers))
-        handler = handlers[0]
-        self.assertIsInstance(handler, StreamHandler)
-
-
-class MultiHandlerLoggerTests(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.stdout_handler = StreamHandler('test:sys.stdout', sys.stdout)
-        cls.stderr_handler = StreamHandler('test:sys.stderr', sys.stderr)
-
-    def test_add_handler(self):
-        logger = Logger(handlers=[self.stdout_handler], template='{message}')
-        message = 'simple'
-        with CaptureOutput() as captured:
-            logger.info(message)
-        capd = captured.get_text()
-        self.assertEqual(capd, message)
-        logger.add_handler(self.stderr_handler)
-        self.assertEqual(set(logger.handlers), {self.stdout_handler, self.stderr_handler})
-        with CaptureOutput() as captured:
-            logger.info(message)
-        capd = captured.get_lines()
-        self.assertEqual(2, len(capd))
-        self.assertEqual(capd[0], capd[1])
+    def test_remove_formatter(self):
+        new_formatter = Formatter()
+        self.logger.add_formatter(new_formatter)
+        self.logger.remove_formatter(self.logger.default_formatter)
+        self.assertEqual(self.logger.formatters, {new_formatter})
+        self.assertEqual(self.logger.default_formatter, new_formatter)
 
     def test_remove_handler(self):
-        logger = Logger(handlers=[self.stdout_handler], template='%(message)s', style=TemplateStyle.PERCENT)
-        message = 'simple'
-        with CaptureOutput() as captured:
-            logger.info(message)
-        capd = captured.get_text()
-        self.assertEqual(capd, message)
-        logger.add_handler(self.stderr_handler)
-        self.assertEqual(set(logger.handlers), {self.stdout_handler, self.stderr_handler})
-        with CaptureOutput() as captured:
-            logger.info(message)
-        capd = captured.get_lines()
-        self.assertEqual(2, len(capd))
-        self.assertEqual(capd[0], capd[1])
-        logger.remove_handler(self.stderr_handler)
-        self.assertEqual(logger.handlers, [self.stdout_handler])
+        self.assertEqual(1, len(self.logger.handlers))
+        new_handler = StreamHandler(sys.stderr, name='new')
+        self.logger.add_handler(new_handler)
+        self.assertEqual(2, len(self.logger.handlers))
+        rm = [h for h in self.logger.handlers if h.stream == sys.stdout][0]
+        self.logger.remove_handler(rm)
+        self.assertEqual(1, len(self.logger.handlers))
+        self.assertTrue(list(self.logger.handlers)[0].stream == sys.stderr)
 
 
-class AdditionalContextLoggerTests(unittest.TestCase):
+class WithLoggerTests(unittest.TestCase):
 
-    @staticmethod
-    def get_unique_id():
-        return 'this-is-your-super-special-uid'
+    def setUp(self):
+        self.logger = Logger('test-logger', LogLevel.DEBUG, timezone='America/Chicago')
 
-    @classmethod
-    def setUpClass(cls):
-        template = '{uid} : {message}'
-        cls.logger = Logger(template=template, additional_context={'uid': cls.get_unique_id})
+    def test_using(self):
+        formatter = Formatter(name='new', template='check this out: {message}')
+        self.logger.add_formatter(formatter)
+        self.assertEqual(2, len(self.logger.formatters))
 
-    def test_additional_context_in_log(self):
-        message = 'hooray!!!'
-        with CaptureOutput() as captured:
-            self.logger.info(message)
-        capd = captured.get_text().rstrip()
-        self.assertEqual(capd, 'this-is-your-super-special-uid : hooray!!!')
-        with CaptureOutput() as captured:
-            self.logger.info(message)
-        capd = captured.get_text().rstrip()
-        self.assertEqual(capd, 'this-is-your-super-special-uid : hooray!!!')
+        # default stuff
+        with CaptureOutput() as co:
+            self.logger.info('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+
+        # use name
+        with CaptureOutput() as co:
+            with self.logger.using('default') as logger:
+                logger.info('yay!')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+
+        new_regex = re.compile('check this out: .*')
+
+        # use different name
+        with CaptureOutput() as co:
+            with self.logger.using('new') as logger:
+                logger.info('huzzah!')
+        co = co.get_text()
+        self.assertRegex(co, new_regex)
+
+        # use instance
+        with CaptureOutput() as co:
+            with self.logger.using(formatter) as logger:
+                logger.info('awwww yeah!')
+        co = co.get_text()
+        self.assertRegex(co, new_regex)
+
+        # back to normal
+        with CaptureOutput() as co:
+            self.logger.info('message')
+        co = co.get_text()
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+
+    def test_only(self):
+        handler = StreamHandler(sys.stderr)
+        self.logger.add_handler(handler)
+        self.assertEqual(2, len(self.logger.handlers))
+
+        # normal
+        with CaptureOutput() as co:
+            self.logger.info('message')
+        co = co.get_text()
+        split_co = co.splitlines()
+        self.assertEqual(2, len(split_co))
+        for line in split_co:
+            self.assertRegex(line, DEFAULT_LOG_LINE_REGEX)
+        self.assertEqual(split_co[0], split_co[1])
+
+        # use default name
+        with CaptureOutput() as co:
+            with self.logger.only('StreamHandler0') as logger:
+                logger.info('there can be only one')
+        co = co.get_text()
+        split_co = co.splitlines()
+        self.assertEqual(1, len(split_co))
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+
+        # use instance
+        with CaptureOutput() as co:
+            with self.logger.only(handler) as logger:
+                logger.info('again! again!')
+        co = co.get_text()
+        split_co = co.splitlines()
+        self.assertEqual(1, len(split_co))
+        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+
+        # back to normal
+        with CaptureOutput() as co:
+            self.logger.info('message')
+        co = co.get_text()
+        split_co = co.splitlines()
+        self.assertEqual(2, len(split_co))
+        for line in split_co:
+            self.assertRegex(line, DEFAULT_LOG_LINE_REGEX)
+        self.assertEqual(split_co[0], split_co[1])
+
+        # same as normal but showing you can `only` with more than 1
+        with CaptureOutput() as co:
+            with self.logger.only(handler, 'StreamHandler0') as logger:
+                logger.info('again! again!')
+        co = co.get_text()
+        split_co = co.splitlines()
+        self.assertEqual(2, len(split_co))
+        for line in split_co:
+            self.assertRegex(line, DEFAULT_LOG_LINE_REGEX)
+        self.assertEqual(split_co[0], split_co[1])
+
+    def test_using_and_only(self):
+        formatter = Formatter(name='new', template='check this out: {message}')
+        self.logger.add_formatter(formatter)
+        self.assertEqual(2, len(self.logger.formatters))
+
+        handler = StreamHandler(sys.stderr)
+        self.logger.add_handler(handler)
+        self.assertEqual(2, len(self.logger.handlers))
+
+        with CaptureOutput() as co:
+            with self.logger.using(formatter).only(handler) as logger:
+                logger.info('pretty neat')
+        co = co.get_text()
+        split_co = co.splitlines()
+        self.assertEqual(1, len(split_co))
+        self.assertEqual(co, 'check this out: pretty neat')
+
+    def test_using_unknown_formatter_fails(self):
+        with self.assertRaises(FormatterNotFoundError):
+            with self.logger.using(Formatter(template='{barf}')) as logger:
+                logger.info(barf=True)
 
 
-class KwargsContextLoggerTests(unittest.TestCase):
+class LoggerExtendedFeaturesTests(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        template = '{uid} : {message}'
-        cls.logger = Logger(template=template)
+    def test_use_all_the_reserved_keys(self):
+        template = '{timestamp} | {level} | {name} | {message} | {src} | {line} | {func} | {proc}'
+        logger = Logger(template=template)
+        logger.info('stuff')
 
-    def test_kwargs_show_up_in_log(self):
-        with CaptureOutput() as captured:
-            self.logger.info('message', uid='set-on-runtime')
-        capd = captured.get_text()
-        self.assertEqual(capd, 'set-on-runtime : message')
+    def test_use_additional_context_static(self):
+        logger = Logger(template='{metal} {message}', additional_context={'metal': 'heavy'})
+        with CaptureOutput() as co:
+            logger.info('message')
+        co = co.get_text()
+        self.assertEqual(co, 'heavy message')
 
-        with CaptureOutput() as captured:
-            self.logger.info('message', uid='set-again-on-runtime')
-        capd = captured.get_text()
-        self.assertEqual(capd, 'set-again-on-runtime : message')
+    def test_use_additional_context_callable(self):
+        def _get_uid():
+            return str(uuid.uuid4())
 
-        with CaptureOutput() as captured:
-            self.logger.info('message', uid=str(uuid.uuid4()))
-        capd = captured.get_text()
-        self.assertRegex(capd, '\w{8}-\w{4}-\w{4}-\w{4}-\w{12} : message')
+        logger = Logger(template='{uid} {message}', additional_context={'uid': _get_uid})
+        with CaptureOutput() as co:
+            logger.info('message')
+        co = co.get_text()
+        self.assertRegex(co, '\w{8}-\w{4}-\w{4}-\w{4}-\w{12} message')
+
+    def test_use_write_time_context(self):
+        logger = Logger(template='{changeme} {message}')
+        with CaptureOutput() as co:
+            logger.info('message', changeme='uno')
+            logger.info('messages', changeme='dos')
+        co = co.get_text().splitlines()
+        self.assertEqual(co, ['uno message', 'dos messages'])
+
+
+class LoggerNoTimezoneSupportTests(unittest.TestCase):
+
+    def test_no_timezone_support_with_timezone_init_fails(self):
+        with self.assertRaises(ConfigurationError):
+            loggers._arrow_available = False
+            Logger(timezone='America/Chicago')
+
+
+class BadConfigLoggerTests(unittest.TestCase):
+    def test_mixed_style_template(self):
+        template = '{timestamp} : %(message)s'
+        with self.assertRaises(BadTemplateError):
+            Logger(template=template)
+
+    def test_no_keys_in_template(self):
+        with self.assertRaises(BadTemplateError):
+            Logger(template='ohaiiiii')

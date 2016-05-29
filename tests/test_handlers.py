@@ -1,7 +1,7 @@
 import codecs
+import io
 import os
 import socket
-import subprocess
 import sys
 import unittest
 
@@ -13,48 +13,24 @@ class BaseHandlerTest(object):
         raise NotImplementedError
 
 
-# using popen to test stdout/err tests because we want to ensure messages are being sent to the right system io
-# using capturer (like in logger tests) combines out and err and is pretty unhelpful here
-
-class StreamSysOutHandlerTests(BaseHandlerTest, unittest.TestCase):
-
+class StreamHandlerTests(BaseHandlerTest, unittest.TestCase):
     def setUp(self):
-        self.handler = handlers.StreamHandler('test:sys.stdout', sys.stdout)
+        self.handler = handlers.StreamHandler(sys.stdout)
 
     def test_write(self):
-        output = 'ohaiii'
-        cmd = 'from log import handlers; ' \
-              'import sys; ' \
-              'handler = handlers.StreamHandler("test:sys.stdout", sys.stdout); ' \
-              'handler.write("{output}")'.format(output=output)
-        proc = subprocess.Popen(['python', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, _ = proc.communicate()
-        expected = bytes('{output}'.format(output=output), 'utf8')
-        self.assertEqual(stdout, expected)
-
-
-class StreamSysErrHandlerTests(BaseHandlerTest, unittest.TestCase):
-
-    def setUp(self):
-        self.handler = handlers.StreamHandler('test:sys.stderr', sys.stderr)
-
-    def test_write(self):
-        output = 'ohaiii'
-        cmd = 'from log import handlers; ' \
-              'import sys; ' \
-              'handler = handlers.StreamHandler("test:sys.stderr", sys.stderr); ' \
-              'handler.write("{output}")'.format(output=output)
-        proc = subprocess.Popen(['python', '-c', cmd], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        _, stderr = proc.communicate()
-        expected = bytes('{output}'.format(output=output), 'utf8')
-        self.assertEqual(stderr, expected)
+        stream = io.StringIO()
+        handler = handlers.StreamHandler(stream=stream)
+        handler.write('ohaiii')
+        stream.seek(0)
+        output = stream.getvalue()
+        self.assertEqual(output, 'ohaiii')
 
 
 class FileHandlerTests(BaseHandlerTest, unittest.TestCase):
 
     def setUp(self):
         self.filename = '/tmp/test_handlers.log'
-        self.handler = handlers.FileHandler('test:fh', self.filename)
+        self.handler = handlers.FileHandler(self.filename)
 
     def tearDown(self):
         os.remove(self.filename)
@@ -82,7 +58,7 @@ class SocketHandlerTests(BaseHandlerTest, unittest.TestCase):
         self.server.bind(self.address)
         self.server.listen(5)
         # handler is a client
-        self.handler = handlers.SocketHandler('test:localhost@8089', self.socket, self.address)
+        self.handler = handlers.SocketHandler(self.socket, self.address)
 
     def tearDown(self):
         del self.server
@@ -99,3 +75,17 @@ class SocketHandlerTests(BaseHandlerTest, unittest.TestCase):
                 break
         expected = [bytes('{output}'.format(output=output), 'utf8')]
         self.assertEqual(messages, expected)
+
+
+class HandlerCompTests(unittest.TestCase):
+
+    def test_order(self):
+        h0 = handlers._HandlerInterface(name='h0')
+        h1 = handlers._HandlerInterface(name='h1')
+        h2 = handlers._HandlerInterface(name='h2')
+        h1a = handlers._HandlerInterface(name='h1')
+        self.assertTrue(h0 < h1 <= h1a < h2 > h1 >= h1a > h0)
+        self.assertEqual(h1, h1a)
+        handler_set0 = {h2, h1, h0, h1a}
+        handler_set1 = {h1, h0, h1a, h2}
+        self.assertEqual(handler_set0, handler_set1)

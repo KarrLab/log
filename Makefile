@@ -1,6 +1,7 @@
 # shortcuts. because i'm lazy. you should be too.
 
 build:
+	rm -r .env
 	virtualenv -p python3 .env
 	. .env/bin/activate
 	pip install -e .

@@ -1,24 +1,33 @@
 import codecs
 
 
-class _HandlerInterface(object):
+class _HandlerInterface:
     """
-    basic interface for message handlers
+    the common interface that all handlers must subclass
     """
 
     def __init__(self, name):
-        """
-        :param name: the name of the handler - these should be unique
-        :type name: str
-        """
         self.name = name
 
-    def write(self, message):
-        """writes the message to the configured endpoint
+    def __lt__(self, other):
+        return self.name < other.name
 
-        :param message: what you want logged
-        :type message: str
-        """
+    def __le__(self, other):
+        return self.name <= other.name
+
+    def __eq__(self, other):
+        return self.name == other.name
+
+    def __ge__(self, other):
+        return self.name >= other.name
+
+    def __gt__(self, other):
+        return self.name >= other.name
+
+    def __hash__(self):
+        return super(_HandlerInterface, self).__hash__()
+
+    def write(self, message):
         raise NotImplementedError
 
 
@@ -27,23 +36,18 @@ class StreamHandler(_HandlerInterface):
     ``StreamHandler`` is useful for writing messages to a stream, i.e. STDOUT or STDERR
 
     >>> import sys
-    >>> handler = StreamHandler('test:sys.stdout', sys.stdout)
-    logz4dayz
+    >>> handler = StreamHandler(sys.stdout)
     """
 
-    def __init__(self, name, stream, *args, **kwargs):
+    def __init__(self, stream, name=None):
         """
-        :param name: the name of the handler - these should be unique
+        :param stream: an open stream to write to (most typically sys.stdout)
+        :type stream: object
+
+        :param name: the name of the handler
         :type name: str
-
-        :param stream: stream to be written to
-        :type stream: sys.
-
-        :param append_new_line: should a new line be appended to the message
-        :type append_new_line: bool
         """
-        kwargs['name'] = name
-        super(StreamHandler, self).__init__(*args, **kwargs)
+        super(StreamHandler, self).__init__(name)
         self.stream = stream
 
     def write(self, message):
@@ -60,80 +64,76 @@ class FileHandler(_HandlerInterface):
     """
     ``FileHandler`` is useful for writing messages to a file.
 
-    .. note: if you want to rotate the log files, use the system ``logrotate`` functionality - it works
-    better than anything you can put together here.
-
     >>> fname = '/tmp/test.log'
-    >>> handler = FileHandler('test:fh', fname)
-    ['filed away']
+    >>> handler = FileHandler(fname)
     """
 
-    def __init__(self, name, filename, mode='a', encoding='utf8', *args, **kwargs):
+    def __init__(self, filename, mode='a', encoding='utf8', errors='strict', buffering=1, name=None):
         """
-        :param name: the name of the handler - these should be unique
-        :type name: str
-
-        :param filename: the name of the file to be written to
+        :param filename: the name of the file to write to
         :type filename: str
 
-        :param mode: the file write mode - defaults to 'a' (append)
+        :param mode: the write mode
         :type mode: str
 
-        :param encoding: the encoding of the file - defaults to 'utf8'
+        :param encoding: the encoding of the file
         :type encoding: str
 
-        :param append_new_line: should a new line be appended to the message
-        :type append_new_line: bool
+        :param errors: the error mode for writing
+        :type errors: str
+
+        :param buffering: the buffering level
+        :type buffering: int
+
+        :param name: the name of the handler
+        :type name: str
         """
-        kwargs['name'] = name
-        super(FileHandler, self).__init__(*args, **kwargs)
-        self._filename = filename
-        self._mode = mode
-        self._encoding = encoding
-        self.fh = codecs.open(filename, mode=mode, encoding=encoding)
+        super(FileHandler, self).__init__(name)
+        self.fh = codecs.open(filename, mode=mode, encoding=encoding, errors=errors, buffering=buffering)
 
     def write(self, message):
-        """appends the message to the configured file
+        """writes the message to the configured file
 
         :param message: what you want logged
         :type message: str
         """
+
         self.fh.write(message)
         self.fh.flush()
 
 
 class SocketHandler(_HandlerInterface):
     """
-    ``SocketHandler`` is useful for writing logs to a socket. this can be used for network sockets of unix sockets.
+    SocketHandler is useful for writing logs to a socket. this can be used for network sockets of unix sockets.
 
-        >>> import socket
-        >>> net_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        >>> net_addr = ('example.com', 9999)
-        >>> net_handler = SocketHandler('test:net_sock', net_sock, net_addr)
-        >>> unix_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        >>> unix_addr = '/tmp/log.sock'
-        >>> unix_handler = SocketHandler('test:unix_sock', unix_sock, unix_addr)
+    >>> import socket
+    >>> net_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    >>> net_addr = ('example.com', 9999)
+    >>> net_handler = SocketHandler(net_sock, net_addr)
+    >>>
+    >>> unix_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    >>> unix_addr = '/tmp/log.sock'
+    >>> unix_handler = SocketHandler(unix_sock, unix_addr)
     """
 
-    def __init__(self, name, socket, address, *args, **kwargs):
+    def __init__(self, socket, address, encoding='utf8', name=None):
         """
-        :param name: the name of the handler - these should be unique
+        :param socket: the socket to write messages to
+        :type socket: socket
+
+        :param address: the socket location
+        :type address: str or tuple
+
+        :param encoding: the encoding of the message
+        :type encoding: str
+
+        :param name: the name of the handler
         :type name: str
-
-        :param socket: a configured socket
-        :type socket: socket.socket
-
-        :param address: full connection information for the socket to bind to
-        :type: address: type
-
-        :param append_new_line: should a new line be appended to the message
-        :type append_new_line: bool
         """
-        kwargs['name'] = name
-        super(SocketHandler, self).__init__(*args, **kwargs)
+        super(SocketHandler, self).__init__(name)
         self.socket = socket
-        self._address = address
         self.socket.connect(address)
+        self.encoding = encoding
 
     def write(self, message):
         """writes the message to the configured socket
@@ -141,4 +141,5 @@ class SocketHandler(_HandlerInterface):
         :param message: what you want logged
         :type message: str
         """
-        self.socket.sendall(bytes(message, 'utf8'))
+
+        self.socket.sendall(bytes(message, self.encoding))

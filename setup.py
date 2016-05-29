@@ -3,7 +3,7 @@
 
 import os
 import re
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 name = 'log'
@@ -52,25 +52,6 @@ def get_version(pkg):
     return re.search("^__version__ = ['\"]([^'\"]+)['\"]", init_py, re.MULTILINE).group(1)
 
 
-def get_packages(pkg):
-    return [
-        dirpath for dirpath, dirnames, filenames in os.walk(pkg)
-        if os.path.exists(os.path.join(dirpath, '__init__.py'))
-    ]
-
-
-def get_package_data(pkg):
-    walk = [
-        (dirpath.replace(pkg + os.sep, '', 1), filenames) for dirpath, dirnames, filenames in os.walk(pkg)
-        if not os.path.exists(os.path.join(dirpath, '__init__.py'))
-    ]
-
-    filepaths = []
-    for base, filenames in walk:
-        filepaths.extend([os.path.join(base, filename) for filename in filenames])
-    return {pkg: filepaths}
-
-
 setup(
     name=name,
     version=get_version(package),
@@ -80,7 +61,7 @@ setup(
     author=author,
     author_email=author_email,
     classifiers=classifiers,
-    packages=get_packages(package),
+    packages=find_packages(exclude=['*tests*']),
     install_requires=install_requires,
     extras_require={
         'timezone': timezone_requires,
