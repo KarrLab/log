@@ -16,7 +16,7 @@ except ImportError:           # pragma: no cover
     _arrow_available = False  # pragma: no cover
 
 
-class Logger:
+class Logger(object):
     """
     ``Logger`` writes log entries.
 

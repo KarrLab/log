@@ -1,7 +1,7 @@
 import codecs
 
 
-class _HandlerInterface:
+class _HandlerInterface(object):
     """
     the common interface that all handlers must subclass
     """

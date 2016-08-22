@@ -3,7 +3,7 @@ import re
 from .errors import BadTemplateError, ConfigurationError
 
 
-class TemplateStyle:
+class TemplateStyle(object):
     """
     ``TemplateStyle`` is a handy control workflow for ``Formatter`` to determine how to interpolate templates
     and parameters.
@@ -51,7 +51,7 @@ class TemplateStyle:
             raise BadTemplateError("Couldn't find any matching variable patterns in template")
 
 
-class Formatter:
+class Formatter(object):
     """
     ``Formatter`` is a simple wrapper for interpolating log entry templates and context variables.
 
