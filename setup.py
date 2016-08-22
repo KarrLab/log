@@ -14,7 +14,9 @@ author = 'Vince Forgione'
 author_email = 'vince.4gione@icloud.com'
 license = 'MIT'
 
-install_requires = []
+install_requires = [
+    'PyYAML',
+]
 
 timezone_requires = install_requires + [
     'arrow',
