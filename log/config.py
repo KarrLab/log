@@ -65,17 +65,7 @@ class Config(object):
                     if not path.isfile(filename):
                         open(filename, 'w').close()
 
-                    if 'mode' in config_handler:
-                        mode = config_handler.pop('mode')
-                    else:
-                        model = 'a'
-
-                    if 'encoding' in config_handler:
-                        encoding = config_handler.pop('encoding')
-                    else:
-                        encoding = 'utf8'
-
-                    handler = FileHandler(filename, name=name, mode=mode, encoding=encoding, **config_handler)
+                    handler = FileHandler(filename, name=name, **config_handler)
 
                 else:
                     raise ConfigurationError('Unsupported handler class: ' + class_name)
