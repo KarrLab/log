@@ -3,6 +3,7 @@
 
 import os
 import re
+import sys
 from setuptools import setup, find_packages
 
 
@@ -17,6 +18,8 @@ license = 'MIT'
 install_requires = [
     'PyYAML',
 ]
+if sys.version_info < (3, 4, 0):
+    install_requires.append('enum34')
 
 timezone_requires = install_requires + [
     'arrow',
