@@ -3,7 +3,7 @@ from .formatters import Formatter
 from .handlers import FileHandler, StreamHandler
 from .levels import LogLevel
 from .loggers import Logger
-from os import path
+from os import makedirs, path
 import sys
 import yaml
 
@@ -60,7 +60,7 @@ class Config(object):
                     filename = path.expanduser(config_handler.pop('filename'))
 
                     if not path.isdir(path.dirname(filename)):
-                        os.makedirs(path.dirname(filename))
+                        makedirs(path.dirname(filename))
 
                     if not path.isfile(filename):
                         open(filename, 'w').close()
