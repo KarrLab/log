@@ -5,8 +5,8 @@ from .errors import BadTemplateError, ConfigurationError
 
 class TemplateStyle(object):
     """
-    ``TemplateStyle`` is a handy control workflow for ``Formatter`` to determine how to interpolate templates
-    and parameters.
+    ``TemplateStyle`` is a handy control workflow for ``Formatter`` to determine how to interpolate 
+    templates and parameters.
 
     >>> template = '{timestamp} {level} : {message}'
     >>> fmt_func, style = TemplateStyle.determine_format_style(template)
@@ -23,7 +23,10 @@ class TemplateStyle(object):
 
     @staticmethod
     def _fmt_braces(template, **params):
-        return template.format(**params)
+        try:
+            return template.format(**params)
+        except KeyError as e:
+            raise ValueError( "Value for {} in logging template, but not provided by log event.".format( e ) ) 
 
     PERCENT = _fmt_percent
     BRACES = _fmt_braces

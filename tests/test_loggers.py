@@ -2,6 +2,7 @@ import re
 import sys
 import unittest
 import uuid
+import six
 
 from capturer import CaptureOutput
 
@@ -22,28 +23,28 @@ class LoggerLoggingMethodsTests:
         with CaptureOutput() as co:
             self.logger.debug('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
         self.assertTrue(co.endswith('[DEBUG] : message'))
 
     def test_info(self):
         with CaptureOutput() as co:
             self.logger.info('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
         self.assertTrue(co.endswith('[INFO] : message'))
 
     def test_warning(self):
         with CaptureOutput() as co:
             self.logger.warning('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
         self.assertTrue(co.endswith('[WARNING] : message'))
 
     def test_error(self):
         with CaptureOutput() as co:
             self.logger.error('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
         self.assertTrue(co.endswith('[ERROR] : message'))
 
     def test_exception(self):
@@ -53,7 +54,7 @@ class LoggerLoggingMethodsTests:
             except ZeroDivisionError:
                 self.logger.exception('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
         split_co = co.splitlines()
         self.assertTrue(len(split_co) > 1)
         self.assertTrue(split_co[0].endswith('[EXCEPTION] : message'))
@@ -140,14 +141,14 @@ class WithLoggerTests(unittest.TestCase):
         with CaptureOutput() as co:
             self.logger.info('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
 
         # use name
         with CaptureOutput() as co:
             with self.logger.using('default') as logger:
                 logger.info('yay!')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
 
         new_regex = re.compile('check this out: .*')
 
@@ -156,20 +157,20 @@ class WithLoggerTests(unittest.TestCase):
             with self.logger.using('new') as logger:
                 logger.info('huzzah!')
         co = co.get_text()
-        self.assertRegex(co, new_regex)
+        six.assertRegex(self, co, new_regex)
 
         # use instance
         with CaptureOutput() as co:
             with self.logger.using(formatter) as logger:
                 logger.info('awwww yeah!')
         co = co.get_text()
-        self.assertRegex(co, new_regex)
+        six.assertRegex(self, co, new_regex)
 
         # back to normal
         with CaptureOutput() as co:
             self.logger.info('message')
         co = co.get_text()
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
 
     def test_only(self):
         handler = StreamHandler(sys.stderr)
@@ -183,7 +184,7 @@ class WithLoggerTests(unittest.TestCase):
         split_co = co.splitlines()
         self.assertEqual(2, len(split_co))
         for line in split_co:
-            self.assertRegex(line, DEFAULT_LOG_LINE_REGEX)
+            six.assertRegex(self, line, DEFAULT_LOG_LINE_REGEX)
         self.assertEqual(split_co[0], split_co[1])
 
         # use default name
@@ -193,7 +194,7 @@ class WithLoggerTests(unittest.TestCase):
         co = co.get_text()
         split_co = co.splitlines()
         self.assertEqual(1, len(split_co))
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
 
         # use instance
         with CaptureOutput() as co:
@@ -202,7 +203,7 @@ class WithLoggerTests(unittest.TestCase):
         co = co.get_text()
         split_co = co.splitlines()
         self.assertEqual(1, len(split_co))
-        self.assertRegex(co, DEFAULT_LOG_LINE_REGEX)
+        six.assertRegex(self, co, DEFAULT_LOG_LINE_REGEX)
 
         # back to normal
         with CaptureOutput() as co:
@@ -211,7 +212,7 @@ class WithLoggerTests(unittest.TestCase):
         split_co = co.splitlines()
         self.assertEqual(2, len(split_co))
         for line in split_co:
-            self.assertRegex(line, DEFAULT_LOG_LINE_REGEX)
+            six.assertRegex(self, line, DEFAULT_LOG_LINE_REGEX)
         self.assertEqual(split_co[0], split_co[1])
 
         # same as normal but showing you can `only` with more than 1
@@ -222,7 +223,7 @@ class WithLoggerTests(unittest.TestCase):
         split_co = co.splitlines()
         self.assertEqual(2, len(split_co))
         for line in split_co:
-            self.assertRegex(line, DEFAULT_LOG_LINE_REGEX)
+            six.assertRegex(self, line, DEFAULT_LOG_LINE_REGEX)
         self.assertEqual(split_co[0], split_co[1])
 
     def test_using_and_only(self):
@@ -270,7 +271,7 @@ class LoggerExtendedFeaturesTests(unittest.TestCase):
         with CaptureOutput() as co:
             logger.info('message')
         co = co.get_text()
-        self.assertRegex(co, '\w{8}-\w{4}-\w{4}-\w{4}-\w{12} message')
+        six.assertRegex(self, co, '\w{8}-\w{4}-\w{4}-\w{4}-\w{12} message')
 
     def test_use_write_time_context(self):
         logger = Logger(template='{changeme} {message}')
@@ -284,9 +285,15 @@ class LoggerExtendedFeaturesTests(unittest.TestCase):
 class LoggerNoTimezoneSupportTests(unittest.TestCase):
 
     def test_no_timezone_support_with_timezone_init_fails(self):
-        with self.assertRaises(ConfigurationError):
+        tmp = loggers._arrow_available
+        try:
             loggers._arrow_available = False
             Logger(timezone='America/Chicago')
+            self.assertTrue( False, msg="ConfigurationError not thrown" )
+        except ConfigurationError as e:
+            self.assertTrue( True, msg="ConfigurationError thrown" )
+        finally:
+            loggers._arrow_available = tmp  # reset loggers._arrow_available, avoiding side effect
 
 
 class BadConfigLoggerTests(unittest.TestCase):

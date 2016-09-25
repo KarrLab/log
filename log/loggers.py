@@ -64,7 +64,10 @@ class Logger(object):
         for formatter in formatters:
             self.add_formatter(formatter)
 
-        self._default_formatter = list(filter(lambda f: f.name == 'default', self._formatters))[0]
+        tmp = list(filter(lambda f: f.name == 'default', self._formatters))
+        if not tmp:
+            raise ValueError("No default formatter(s) provided for log '{}'.".format( name ) )
+        self._default_formatter = tmp[0]
 
         if template:
             self._apply_template_to_formatters(template)
@@ -126,7 +129,9 @@ class Logger(object):
         :param message: the message of the log entry
         :param message: str
 
-        :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+        :param kwargs: arbitrary key/value pairs to be used as additional interpolation context;
+            if the call to debug() is wrapped in other functions, set 'local_call_depth' to application 
+            call depth prior to calling debug() to obtain proper log call location
         :type kwargs: dict
         """
         if self.level <= LogLevel.DEBUG:
@@ -139,6 +144,8 @@ class Logger(object):
         :param message: str
 
         :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+            if the call to info() is wrapped in other functions, set 'local_call_depth' to application 
+            call depth prior to calling info() to obtain proper log call location
         :type kwargs: dict
         """
         if self.level <= LogLevel.INFO:
@@ -151,6 +158,8 @@ class Logger(object):
         :param message: str
 
         :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+            if the call to warning() is wrapped in other functions, set 'local_call_depth' to application 
+            call depth prior to calling warning() to obtain proper log call location
         :type kwargs: dict
         """
         if self.level <= LogLevel.WARNING:
@@ -163,6 +172,8 @@ class Logger(object):
         :param message: str
 
         :param kwargs: arbitrary key/value pairs to be used as additional interpolation context
+            if the call to error() is wrapped in other functions, set 'local_call_depth' to application 
+            call depth prior to calling error() to obtain proper log call location
         :type kwargs: dict
         """
         self._log(message, LogLevel.ERROR, **kwargs)
@@ -314,7 +325,10 @@ class Logger(object):
             params['timestamp'] = self._get_timestamp()
 
         if {'src', 'line', 'func', 'proc'}.intersection(set(template_keys)):
-            exec_info = self._get_execution_info()
+            if 'local_call_depth' in context:
+                exec_info = self._get_execution_info( additional_call_depth=context['local_call_depth'] )
+            else:
+                exec_info = self._get_execution_info()
             params.update(exec_info)
 
         if exception:
@@ -343,8 +357,8 @@ class Logger(object):
         ts = ts.isoformat()
         return ts
 
-    def _get_execution_info(self):
-        frame = sys._getframe(2)
+    def _get_execution_info(self,additional_call_depth=0):
+        frame = sys._getframe(3+additional_call_depth)
         fname, line, funcname, _, __ = inspect.getframeinfo(frame)
         return {
             'src': fname,
