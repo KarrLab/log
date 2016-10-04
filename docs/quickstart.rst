@@ -180,7 +180,7 @@ Which would produce::
  Context Management
 --------------------
 
-``log`` employs simple context management for `Logger`s. If you have sever formatters or handlers or both setup and
+``log`` employs simple context management for `Logger`s. If you have several formatters or handlers or both setup and
 find yourself needing to switch between them in given situations, doing so is trivial using a `with` block::
 
     #!/usr/bin/env python

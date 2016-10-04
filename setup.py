@@ -17,6 +17,7 @@ license = 'MIT'
 
 install_requires = [
     'PyYAML',
+    'six'
 ]
 if sys.version_info < (3, 4, 0):
     install_requires.append('enum34')

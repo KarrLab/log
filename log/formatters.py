@@ -25,6 +25,9 @@ class TemplateStyle(object):
     def _fmt_braces(template, **params):
         try:
             return template.format(**params)
+        except ValueError as e:
+            if str(e) == 'Invalid format specifier':
+                raise ValueError( "Invalid string format specifier in template '{}'.".format( template ) )
         except KeyError as e:
             raise ValueError( "Value for {} in logging template, but not provided by log event.".format( e ) ) 
 
@@ -155,3 +158,11 @@ class Formatter(object):
         else:
             self._template_format_fnc, self._template_style = None, None
         self._template = template
+
+    def __str__(self):
+        """String representation of a Formatter.
+        """
+        rv='Formatter: '
+        for att in sorted('append_new_line name _template _template_style'.split()):
+            rv += "{} = {}; ".format( att, getattr(self, att) )
+        return rv

@@ -70,6 +70,8 @@ class Logger(object):
         self._default_formatter = tmp[0]
 
         if template:
+            # problematic, as this modifies formatters separately defined
+            # it will be more problematic if formatters are shared among loggers
             self._apply_template_to_formatters(template)
             self._template = template
         else:
@@ -232,9 +234,9 @@ class Logger(object):
             self._default_formatter = last_formatter
 
     def clone(self):
-        """creates a copy of the logger instance
+        """creates a shallow copy of the logger instance
 
-        :returns: a copy of the current logger
+        :returns: a shallow copy of the current logger
         """
         logger = Logger()
         logger.name = self.name

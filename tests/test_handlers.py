@@ -1,5 +1,6 @@
 import codecs
-import io
+import six
+from six import StringIO as PortableStringIO
 import os
 import socket
 import sys
@@ -18,7 +19,7 @@ class StreamHandlerTests(BaseHandlerTest, unittest.TestCase):
         self.handler = handlers.StreamHandler(sys.stdout)
 
     def test_write(self):
-        stream = io.StringIO()
+        stream = PortableStringIO()
         handler = handlers.StreamHandler(stream=stream)
         handler.write('ohaiii')
         stream.seek(0)
@@ -73,7 +74,10 @@ class SocketHandlerTests(BaseHandlerTest, unittest.TestCase):
             if len(buffer) > 0:
                 messages.append(buffer)
                 break
-        expected = [bytes('{output}'.format(output=output), 'utf8')]
+        if six.PY3:
+            expected = [bytes('{output}'.format(output=output), 'utf8')]
+        else:
+            expected = ['{output}'.format(output=output)]
         self.assertEqual(messages, expected)
 
 

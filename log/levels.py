@@ -1,3 +1,4 @@
+# need enum34 for pre python 3.4 compatibility
 from enum import Enum
 
 

@@ -1,4 +1,5 @@
 import codecs
+import six
 
 
 class _HandlerInterface(object):
@@ -142,4 +143,8 @@ class SocketHandler(_HandlerInterface):
         :type message: str
         """
 
-        self.socket.sendall(bytes(message, self.encoding))
+        # self.socket.sendall(bytes(message, self.encoding))
+        if six.PY3:
+            self.socket.sendall(bytes(message, self.encoding))
+        else:
+            self.socket.sendall(message)
